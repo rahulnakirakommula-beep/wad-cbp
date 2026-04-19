@@ -1,0 +1,98 @@
+const asyncHandler = require('express-async-handler');
+const UserActivity = require('../models/UserActivity');
+
+// @desc    Upsert user activity (save/ignore)
+// @route   POST /api/activity
+// @access  Private
+const upsertActivity = asyncHandler(async (req, res) => {
+  const { listingId, status } = req.body;
+
+  if (!listingId || !status) {
+    res.status(400);
+    throw new Error('Please provide listingId and status');
+  }
+
+  // Prevent setting 'missed' manually
+  if (status === 'missed') {
+    res.status(403);
+    throw new Error('Cannot set status to missed manually');
+  }
+
+  const activity = await UserActivity.findOneAndUpdate(
+    { userId: req.user._id, listingId },
+    { status, statusUpdatedAt: Date.now() },
+    { new: true, upsert: true }
+  );
+
+  res.json(activity);
+});
+
+// @desc    Update activity status (e.g. mark applied)
+// @route   PUT /api/activity/:listingId
+// @access  Private
+const updateActivity = asyncHandler(async (req, res) => {
+  const { status, notes } = req.body;
+  const { listingId } = req.params;
+
+  if (status === 'missed') {
+    res.status(403);
+    throw new Error('Cannot set status to missed manually');
+  }
+
+  const activity = await UserActivity.findOne({ userId: req.user._id, listingId });
+
+  if (activity) {
+    activity.status = status || activity.status;
+    if (notes !== undefined) activity.notes = notes;
+    activity.statusUpdatedAt = Date.now();
+    
+    const updatedActivity = await activity.save();
+    res.json(updatedActivity);
+  } else {
+    res.status(404);
+    throw new Error('Activity record not found');
+  }
+});
+
+// @desc    Get activity summary stats
+// @route   GET /api/activity/summary
+// @access  Private
+const getActivitySummary = asyncHandler(async (req, res) => {
+  const activities = await UserActivity.find({ userId: req.user._id });
+
+  const summary = {
+    saved: 0,
+    applied: 0,
+    missed: 0
+  };
+
+  activities.forEach(a => {
+    if (a.status === 'saved') summary.saved++;
+    if (a.status === 'applied') summary.applied++;
+    if (a.status === 'missed') summary.missed++;
+  });
+
+  res.json(summary);
+});
+
+// @desc    Get user activities
+// @route   GET /api/activity
+// @access  Private
+const getActivities = asyncHandler(async (req, res) => {
+  const { status } = req.query;
+  const filter = { userId: req.user._id };
+  
+  if (status && status !== 'all') {
+    filter.status = status;
+  }
+
+  const activities = await UserActivity.find(filter).populate('listingId');
+  res.json(activities);
+});
+
+module.exports = {
+  upsertActivity,
+  updateActivity,
+  getActivitySummary,
+  getActivities
+};

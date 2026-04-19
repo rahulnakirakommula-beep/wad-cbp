@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-navy: #1B2A4A;
+  --accent-amber: #E6A817;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800;
+}
