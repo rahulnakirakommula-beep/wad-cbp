@@ -1,6 +1,6 @@
-import { Calendar, Briefcase, MapPin, Bookmark, ExternalLink } from 'lucide-react';
+import { Calendar, Briefcase, MapPin, Bookmark, ExternalLink, Flag } from 'lucide-react';
 
-function ListingCard({ listing, onSave, onIgnore }) {
+function ListingCard({ listing, onSave, onIgnore, onFlag }) {
   const { title, orgName, type, stipendType, locationType, timeline, priority } = listing;
 
   const isClosingSoon = () => {
@@ -22,12 +22,22 @@ function ListingCard({ listing, onSave, onIgnore }) {
         <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center font-bold text-slate-400 border border-slate-100">
           {orgName.substring(0, 2).toUpperCase()}
         </div>
-        <button 
-          onClick={() => onSave(listing._id)}
-          className="p-2 text-slate-400 hover:text-accent-amber hover:bg-amber-50 rounded-lg transition-colors"
-        >
-          <Bookmark size={20} />
-        </button>
+        <div className="flex gap-1">
+          <button 
+            onClick={() => onFlag(listing._id)}
+            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            title="Flag issue"
+          >
+            <Flag size={18} />
+          </button>
+          <button 
+            onClick={() => onSave(listing._id)}
+            className="p-2 text-slate-400 hover:text-accent-amber hover:bg-amber-50 rounded-lg transition-colors"
+            title="Save for later"
+          >
+            <Bookmark size={20} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1">

@@ -48,7 +48,9 @@ export function AuthProvider({ children }) {
       
       setUser(data);
       
-      if (!data.onboardingComplete) {
+      if (data.role === 'admin') {
+        navigate('/admin');
+      } else if (!data.onboardingComplete) {
         navigate('/onboarding');
       } else {
         navigate('/app/feed');

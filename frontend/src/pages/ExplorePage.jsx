@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../context/AuthContext';
-import Navbar from '../components/Navbar';
 import ListingCard from '../components/ListingCard';
 import { Loader2, Search, SlidersHorizontal, X } from 'lucide-react';
 
-const DOMAIN_OPTIONS = ['Development', 'Design', 'AI', 'Cybersecurity', 'Web3', 'Product', 'Data Science'];
-const BRANCH_OPTIONS = ['CSE', 'IT', 'ECE', 'MECH', 'CIVIL', 'EEE', 'CHEM'];
+import { DOMAIN_OPTIONS, BRANCH_OPTIONS } from '../constants';
 
 function ExplorePage() {
   const queryClient = useQueryClient();
@@ -43,6 +41,23 @@ function ExplorePage() {
     }
   });
 
+  // Flag Mutation
+  const flagMutation = useMutation({
+    mutationFn: async ({ listingId, issueType, proposedFix }) => {
+      return api.post(`/listings/${listingId}/flag`, { issueType, proposedFix });
+    },
+    onSuccess: () => {
+      alert('Thanks! Admin will review this shortly.');
+    }
+  });
+
+  const handleFlag = (listingId) => {
+    const fix = prompt('What is wrong with this listing? (Optional)');
+    if (fix !== null) {
+      flagMutation.mutate({ listingId, issueType: 'other', proposedFix: fix });
+    }
+  };
+
   const toggleFilter = (list, setList, item) => {
     if (list.includes(item)) {
       setList(list.filter(i => i !== item));
@@ -54,7 +69,6 @@ function ExplorePage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar />
 
       <main className="max-w-7xl mx-auto px-6 py-10">
         <header className="mb-10 text-center">
@@ -132,6 +146,7 @@ function ExplorePage() {
                       listing={listing} 
                       onSave={(id) => activityMutation.mutate({ listingId: id, status: 'saved' })}
                       onIgnore={(id) => activityMutation.mutate({ listingId: id, status: 'ignored' })}
+                      onFlag={handleFlag}
                     />
                   ))
                 )}

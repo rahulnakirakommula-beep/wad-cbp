@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../context/AuthContext';
-import Navbar from '../components/Navbar';
 import FeedSection from '../components/FeedSection';
 import ListingCard from '../components/ListingCard';
 import { Loader2, PlusCircle, BookmarkCheck, XCircle } from 'lucide-react';
@@ -37,12 +36,29 @@ function FeedPage() {
     }
   });
 
+  // Flag Mutation
+  const flagMutation = useMutation({
+    mutationFn: async ({ listingId, issueType, proposedFix }) => {
+      return api.post(`/listings/${listingId}/flag`, { issueType, proposedFix });
+    },
+    onSuccess: () => {
+      alert('Thanks! Admin will review this shortly.');
+    }
+  });
+
   const handleSave = (listingId) => {
     interactionMutation.mutate({ listingId, status: 'saved' });
   };
 
   const handleIgnore = (listingId) => {
     interactionMutation.mutate({ listingId, status: 'ignored' });
+  };
+
+  const handleFlag = (listingId) => {
+    const fix = prompt('What is wrong with this listing? (Optional)');
+    if (fix !== null) {
+      flagMutation.mutate({ listingId, issueType: 'other', proposedFix: fix });
+    }
   };
 
   if (isLoading) {
@@ -56,7 +72,6 @@ function FeedPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar />
       
       <main className="max-w-7xl mx-auto px-6 py-10">
         
@@ -142,6 +157,7 @@ function FeedPage() {
                 listing={listing} 
                 onSave={handleSave} 
                 onIgnore={handleIgnore} 
+                onFlag={handleFlag}
               />
             ))}
           </FeedSection>

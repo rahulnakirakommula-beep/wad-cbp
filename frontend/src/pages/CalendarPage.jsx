@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../context/AuthContext';
-import Navbar from '../components/Navbar';
 import { Loader2, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 
 function CalendarPage() {
@@ -42,7 +41,6 @@ function CalendarPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar />
 
       <main className="max-w-7xl mx-auto px-6 py-10">
         <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">

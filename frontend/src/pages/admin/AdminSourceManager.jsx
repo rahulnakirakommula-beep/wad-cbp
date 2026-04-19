@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../context/AuthContext';
-import Navbar from '../../components/Navbar';
 import { Loader2, ShieldCheck, Globe, ArrowLeft, MoreHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -36,8 +35,6 @@ function AdminSourceManager() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar />
-
       <main className="max-w-7xl mx-auto px-6 py-10">
         <header className="mb-12">
           <Link to="/admin" className="text-sm font-bold text-accent-amber hover:underline flex items-center gap-2 mb-4">

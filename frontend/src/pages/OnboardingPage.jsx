@@ -3,17 +3,7 @@ import { useAuth, api } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, Check } from 'lucide-react';
 
-const BRANCHES = ['CSE', 'IT', 'ECE', 'MECH', 'CIVIL', 'EEE', 'CHEM'];
-const TAGS = [
-  { id: 'frontend', name: 'Frontend' },
-  { id: 'backend', name: 'Backend' },
-  { id: 'machine-learning', name: 'Machine Learning' },
-  { id: 'data-science', name: 'Data Science' },
-  { id: 'cybersecurity', name: 'Cybersecurity' },
-  { id: 'cloud', name: 'Cloud Computing' },
-  { id: 'devops', name: 'DevOps' },
-  { id: 'mobile', name: 'Mobile Dev' }
-];
+import { BRANCHES, TAGS } from '../constants';
 
 function OnboardingPage() {
   const [step, setStep] = useState(1);

@@ -46,8 +46,6 @@ function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar />
-
       <main className="max-w-7xl mx-auto px-6 py-10">
         <header className="mb-12">
           <h1 className="text-4xl font-black text-primary-navy tracking-tight mb-2 flex items-center gap-4">

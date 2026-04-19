@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../context/AuthContext';
-import Navbar from '../../components/Navbar';
 import { Loader2, RefreshCw, Edit2, Trash2, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
@@ -38,8 +37,6 @@ function AdminListingTable() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar />
-
       <main className="max-w-7xl mx-auto px-6 py-10">
         <header className="mb-12 flex items-center justify-between">
           <div>
