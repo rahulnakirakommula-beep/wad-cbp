@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { upsertActivity, updateActivity, getActivitySummary, getActivities } = require('../controllers/activityController');
+const { upsertActivity, updateActivity, getActivitySummary, getActivities, deleteActivity } = require('../controllers/activityController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.route('/')
@@ -8,6 +8,8 @@ router.route('/')
     .post(protect, upsertActivity);
 
 router.get('/summary', protect, getActivitySummary);
-router.put('/:listingId', protect, updateActivity);
+router.route('/:listingId')
+    .put(protect, updateActivity)
+    .delete(protect, deleteActivity);
 
 module.exports = router;

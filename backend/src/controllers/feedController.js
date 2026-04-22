@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const Listing = require('../models/Listing');
 const UserActivity = require('../models/UserActivity');
+const { getCachedRecommendations, cacheRecommendations } = require('../config/redis');
 
 // @desc    Get dashboard feed sections
 // @route   GET /api/feed/sections
@@ -9,63 +10,144 @@ const getFeedSections = asyncHandler(async (req, res) => {
   const user = req.user;
   const now = new Date();
 
-  // 1. Get user activities to exclude (ignored, applied, saved) from certain sections
+  // 1. Try to get cached recommended section
+  const cachedData = await getCachedRecommendations(user._id);
+  if (cachedData) {
+    return res.json(cachedData);
+  }
+
+  // 2. Get user activities to exclude (ignored, applied, saved)
   const activities = await UserActivity.find({ userId: user._id });
   const excludedIds = activities.map(a => a.listingId.toString());
+  
+  // [Existing filtering and sections logic ...]
+  // (Moving logic to a helper for better modularity or just keeping it here for simplicity)
+  
+  const branchFilter = {
+    $or: [
+      { 'targetAudience.branches': { $exists: true, $size: 0 } },
+      { 'targetAudience.branches': user.profile.branch }
+    ]
+  };
 
-  // 2. Closing Soon (within 7 days, excluding user-interacted)
+  const yearFilter = {
+    $or: [
+      { 'targetAudience.years': { $exists: true, $size: 0 } },
+      { 'targetAudience.years': user.profile.currentYear }
+    ]
+  };
+
+  // 3. Closing Soon
   const sevenDaysFromNow = new Date();
   sevenDaysFromNow.setDate(now.getDate() + 7);
 
-  const closingSoon = await Listing.find({
+  let closingSoon = await Listing.find({
     status: 'open',
     'timeline.deadline': { $gte: now, $lte: sevenDaysFromNow },
-    _id: { $nin: excludedIds }
-  }).sort({ 'timeline.deadline': 1 }).limit(5);
-
-  // 3. Don't Miss (priority dont-miss, open)
-  const dontMiss = await Listing.find({
-    priority: 'dont-miss',
-    status: 'open'
-  }).sort({ 'timeline.deadline': 1 }).limit(3);
-
-  // 4. Recommended (Eligibility + Scoring)
-  // Simplified version: Eligibility match + Interest overlap
-  let recommended = await Listing.find({
-    status: 'open',
     _id: { $nin: excludedIds },
-    $and: [
-      { $or: [
-        { 'targetAudience.years': { $exists: true, $size: 0 } },
-        { 'targetAudience.years': user.profile.currentYear }
-      ]},
-      { $or: [
-        { 'targetAudience.branches': { $exists: true, $size: 0 } },
-        { 'targetAudience.branches': user.profile.branch }
-      ]}
-    ]
+    ...branchFilter,
+    ...yearFilter
   }).limit(20);
 
-  // Simple scoring in JS (since it's a small result set)
+  closingSoon = closingSoon.map(listing => {
+    let interestScore = listing.domainTags.reduce((acc, tag) => 
+      acc + (user.interests.includes(tag) ? 10 : 0), 0);
+    return { ...listing.toObject(), interestScore };
+  }).sort((a, b) => b.interestScore - a.interestScore || a.timeline.deadline - b.timeline.deadline)
+    .slice(0, 5);
+
+  // 4. Don't Miss
+  const dontMiss = await Listing.find({
+    priority: 'dont-miss',
+    status: 'open',
+    _id: { $nin: excludedIds },
+    ...branchFilter
+  }).sort({ 'timeline.deadline': 1 }).limit(3);
+
+  // 5. Recommended
+  let recommended = await Listing.find({
+    status: 'open',
+    _id: { $nin: [...excludedIds, ...closingSoon.map(l => l._id.toString())] },
+    ...branchFilter,
+    ...yearFilter
+  }).limit(30);
+
   recommended = recommended.map(listing => {
     let score = 0;
-    // +2 per matching interest
     listing.domainTags.forEach(tag => {
       if (user.interests.includes(tag)) score += 2;
     });
-    // +2 high priority
+    if (listing.timeline.deadline) {
+      const daysToDeadline = (new Date(listing.timeline.deadline) - now) / (1000 * 60 * 60 * 24);
+      if (daysToDeadline > 0 && daysToDeadline <= 30) score += 1;
+    }
     if (listing.priority === 'high') score += 2;
-    // +3 dont-miss
     if (listing.priority === 'dont-miss') score += 3;
     
     return { ...listing.toObject(), score };
   }).sort((a, b) => b.score - a.score).slice(0, 8);
 
-  res.json({
+  const responseData = {
     closingSoon,
     dontMiss,
     recommended
-  });
+  };
+
+  // 6. Cache the result
+  await cacheRecommendations(user._id, responseData);
+
+  res.json(responseData);
+});
+
+// @desc    Get recommended listings ONLY (for legacy tests/infinite scroll)
+// @route   GET /api/feed/recommendations
+// @access  Private
+const getRecommendationsList = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const now = new Date();
+
+  const activities = await UserActivity.find({ userId: user._id });
+  const excludedIds = activities.map(a => a.listingId.toString());
+
+  const branchFilter = {
+    $or: [
+      { 'targetAudience.branches': { $exists: true, $size: 0 } },
+      { 'targetAudience.branches': user.profile.branch }
+    ]
+  };
+
+  let recommended = await Listing.find({
+    status: 'open',
+    _id: { $nin: excludedIds },
+    ...branchFilter
+  }).limit(50);
+
+  recommended = recommended.map(listing => {
+    let score = 0;
+    if (user.interests.some(tag => listing.domainTags.includes(tag))) score += 2;
+    if (listing.priority === 'high') score += 5;
+    if (listing.priority === 'dont-miss') score += 10;
+    return { ...listing.toObject(), score };
+  }).sort((a, b) => b.score - a.score);
+
+  res.json(recommended);
+});
+
+// @desc    Get Don't Miss listings ONLY
+// @route   GET /api/feed/dont-miss
+// @access  Private
+const getDontMissList = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const activities = await UserActivity.find({ userId: user._id });
+  const excludedIds = activities.map(a => a.listingId.toString());
+
+  const dontMiss = await Listing.find({
+    priority: 'dont-miss',
+    status: 'open',
+    _id: { $nin: excludedIds }
+  }).sort({ 'timeline.deadline': 1 });
+
+  res.json(dontMiss);
 });
 
 // @desc    Browse/Filter all listings
@@ -96,5 +178,7 @@ const browseListings = asyncHandler(async (req, res) => {
 
 module.exports = {
   getFeedSections,
-  browseListings
+  browseListings,
+  getRecommendationsList,
+  getDontMissList
 };

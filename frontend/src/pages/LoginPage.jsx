@@ -1,68 +1,98 @@
-import { useForm } from 'react-hook-form';
-import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import { Mail, Lock } from 'lucide-react';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
+import { useToast } from '../context/ToastContext';
 
-function LoginPage() {
-  const { register, handleSubmit, formState: { errors } } = useForm();
+export default function LoginPage() {
   const { login } = useAuth();
-  const [error, setError] = useState('');
+  const { addToast } = useToast();
+  
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
-  const onSubmit = async (data) => {
-    setError('');
-    const result = await login(data.email, data.password);
-    if (!result.success) {
-      setError(result.message);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrors({});
+    setIsSubmitting(true);
+
+    try {
+      const result = await login(formData.email, formData.password);
+      if (!result.success) {
+        addToast({
+          title: 'Login Failed',
+          message: result.message || 'Invalid credentials. Please try again.',
+          type: 'error'
+        });
+      }
+    } catch (err) {
+      addToast({
+        title: 'Network Error',
+        message: 'Could not connect to the server at this time.',
+        type: 'error'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50">
-      <div className="w-full max-w-md p-8 bg-white border-2 rounded-2xl border-primary-navy shadow-[8px_8px_0px_0px_rgba(27,42,74,1)]">
-        <h2 className="mb-6 text-3xl font-bold text-center text-primary-navy">Login to COA</h2>
-        
-        {error && <div className="p-3 mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">{error}</div>}
+    <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
+      <div className="w-full max-w-md bg-white border-2 border-slate-100 rounded-3xl p-8 sm:p-10 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-black text-primary-navy tracking-tight mb-2">Welcome Back</h2>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">Login to your COA account</p>
+        </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-            <input
-              type="email"
-              {...register('email', { required: 'Email is required' })}
-              className="w-full px-4 py-2 border-2 rounded-xl focus:ring-0 focus:border-accent-amber transition-colors outline-none"
-              placeholder="you@college.edu"
-            />
-            {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <Input
+            label="College Email"
+            type="email"
+            iconLeading={Mail}
+            placeholder="you@college.edu"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            required
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <input
+          <div className="space-y-1">
+            <Input
+              label="Password"
               type="password"
-              {...register('password', { required: 'Password is required' })}
-              className="w-full px-4 py-2 border-2 rounded-xl focus:ring-0 focus:border-accent-amber transition-colors outline-none"
+              iconLeading={Lock}
               placeholder="••••••••"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
             />
-            {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
+            <div className="flex justify-end">
+              <Link to="/forgot-password" size="xs" className="text-xs font-bold text-slate-400 hover:text-primary-navy transition-colors">
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
-          <button
+          <Button
             type="submit"
-            className="w-full py-3 mt-4 text-lg font-bold text-white transition-transform active:scale-95 bg-primary-navy rounded-xl hover:opacity-90"
+            className="w-full py-4 text-base"
+            loading={isSubmitting}
           >
-            Login
-          </button>
+            Sign In
+          </Button>
         </form>
 
-        <p className="mt-6 text-center text-slate-600">
-          Don't have an account?{' '}
-          <Link to="/signup" className="font-bold text-accent-amber hover:underline">
-            Sign Up
-          </Link>
-        </p>
+        <div className="mt-10 pt-8 border-t border-slate-50 text-center">
+          <p className="text-sm text-slate-500 font-medium">
+            New explorer?{' '}
+            <Link to="/signup" className="font-black text-primary-navy hover:text-blue-600 transition-colors">
+              Create an account
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
 }
-
-export default LoginPage;

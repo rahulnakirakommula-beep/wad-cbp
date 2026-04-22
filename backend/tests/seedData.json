@@ -1,0 +1,64 @@
+{
+  "User": [
+    {
+      "profile": {
+        "name": "Test User"
+      },
+      "notificationPrefs": {
+        "deadlineReminders": true,
+        "seasonAlerts": true,
+        "dontMissAlerts": true,
+        "cancellationAlerts": true,
+        "emailEnabled": true
+      },
+      "_id": "69e8fdf89c3422fa2a3490a6",
+      "email": "testuser@college.edu",
+      "passwordHash": "$2a$12$LQv3c1yqBWVHxkd0LpX8Z.O/4Jv/g2hXgXhXgXhXgXhXgXhXgXhXg",
+      "isEmailVerified": true,
+      "interests": [],
+      "role": "student",
+      "onboardingComplete": false,
+      "status": "active",
+      "createdAt": "2026-04-22T16:57:28.680Z",
+      "updatedAt": "2026-04-22T16:57:28.680Z",
+      "__v": 0
+    },
+    {
+      "profile": {
+        "name": "Admin User",
+        "branch": "CSE",
+        "currentYear": 1
+      },
+      "notificationPrefs": {
+        "deadlineReminders": true,
+        "seasonAlerts": true,
+        "dontMissAlerts": true,
+        "cancellationAlerts": true,
+        "emailEnabled": true
+      },
+      "_id": "69e8ff309c3422fa2a3490a7",
+      "email": "admin@bluepenguin.com",
+      "passwordHash": "$2a$12$LQv3c1yqBWVHxkd0LpX8Z.O/4Jv/g2hXgXhXgXhXgXhXgXhXgXhXg",
+      "isEmailVerified": true,
+      "interests": [
+        "frontend",
+        "backend",
+        "machine-learning"
+      ],
+      "role": "admin",
+      "onboardingComplete": true,
+      "status": "active",
+      "createdAt": "2026-04-22T17:02:40.576Z",
+      "updatedAt": "2026-04-22T17:12:32.468Z",
+      "__v": 2
+    }
+  ],
+  "Listing": [],
+  "Source": [],
+  "DomainTag": [],
+  "KnowledgeGuide": [],
+  "UserActivity": [],
+  "Notification": [],
+  "DataFlag": [],
+  "AuditLog": []
+}

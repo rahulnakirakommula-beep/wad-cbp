@@ -70,7 +70,26 @@ const listingSchema = new mongoose.Schema({
   isStale: { type: Boolean, default: false },
   isUrlBroken: { type: Boolean, default: false },
   version: { type: Number, default: 1 }
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Virtual for data source year (FR-LST-07)
+listingSchema.virtual('dataSourceYear').get(function() {
+  if (this.timeline.lastDeadline) {
+    return new Date(this.timeline.lastDeadline).getFullYear();
+  }
+  return null;
+});
+
+// Virtual for confidence level (FR-LST-07)
+listingSchema.virtual('confidenceLevel').get(function() {
+  if (this.isCurated) return 'Confirmed';
+  if (this.timeline.lastDeadline) return 'Based on Historical Data';
+  return 'Approximate';
+});
 
 // Indexes from HLD
 listingSchema.index({ status: 1, 'timeline.deadline': 1 });

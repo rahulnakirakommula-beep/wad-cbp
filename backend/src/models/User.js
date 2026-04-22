@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     branch: { 
       type: String, 
-      enum: ['CSE', 'IT', 'ECE', 'MECH', 'CIVIL', 'EEE', 'CHEM'] // Dummy list, update later 
+      enum: ['CE', 'EEE', 'ME', 'ECE', 'CSE', 'EIE', 'IT', 'AE', 'CSBS', 'CS-AIML', 'CS-DS', 'CS-IOT', 'AI & DS', 'CS-CyS', 'ECE - VLSI', 'R&AI', 'Bio-Tech']
     },
     currentYear: { 
       type: Number, 
@@ -55,6 +55,13 @@ const userSchema = new mongoose.Schema({
   },
   lastLoginAt: {
     type: Date
+  },
+  sourceId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Source'
+  },
+  verificationToken: {
+    type: String
   }
 }, { timestamps: true });
 

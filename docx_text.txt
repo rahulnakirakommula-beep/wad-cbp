@@ -1,0 +1,3667 @@
+﻿
+OPPORTUNITY INTELLIGENCE PLATFORM
+  UI/UX Specification Document  
+Figma Design Blueprint Â· Frontend Interaction Contract
+Version 1.0 Â· Campus Opportunity Aggregator (COA)
+Document Attribute
+Value
+Document ID
+COA-UIUX-001
+Companion Documents
+COA-SRS-001 Â· COA-HLD-001
+Version
+1.0
+Scope
+Student Â· Admin Â· Organisation interfaces (23 screens, 35+ components)
+Intent
+Figma design foundation Â· Frontend implementation contract
+Table of Contents
+1. Routing & Navigation Architecture
+1.1 Complete Route Hierarchy
+Every route in the application, its parent, and the guard conditions that control access.
+Route
+Audience
+Guard
+Redirect On Fail
+/
+Public
+None
+â€”
+/login
+Public (unauthenticated only)
+If JWT valid â†’ redirect away
+â†’ /app/feed (student), /admin (admin), /org (org)
+/signup
+Public (unauthenticated only)
+If JWT valid â†’ redirect away
+â†’ /app/feed
+/onboarding
+JWT required
+JWT invalid â†’ /login; onboardingComplete:true â†’ /app/feed
+â†’ /login
+/app/*
+JWT + verified + onboarded + active
+No JWT â†’ /login; unverified â†’ /login+toast; not onboarded â†’ /onboarding; suspended â†’ /suspended
+â†’ /login
+/app/feed
+Student
+As above
+â€”
+/app/listing/:id
+Student
+As above
+â€”
+/app/calendar
+Student
+As above
+â€”
+/app/dashboard
+Student
+As above
+â€”
+/app/notifications
+Student
+As above
+â€”
+/app/settings
+Student
+As above
+â€”
+/app/guide/:id
+Student
+As above; guide must be published
+â†’ /app/feed with 'Guide not found' toast
+/admin/*
+JWT + role:admin
+No JWT â†’ /login; wrong role â†’ /app/feed with 'Access denied' toast
+â†’ /login
+/admin/listings
+Admin
+As above
+â€”
+/admin/listings/new
+Admin
+As above
+â€”
+/admin/listings/:id
+Admin
+As above
+â€”
+/admin/queue
+Admin
+As above
+â€”
+/admin/sources
+Admin
+As above
+â€”
+/admin/tags
+Admin
+As above
+â€”
+/admin/guides
+Admin
+As above
+â€”
+/admin/guides/:id
+Admin
+As above
+â€”
+/admin/stale
+Admin
+As above
+â€”
+/admin/audit
+Admin
+As above
+â€”
+/admin/users
+Admin
+As above
+â€”
+/org/*
+JWT + role:source
+No JWT â†’ /login; wrong role â†’ /app/feed
+â†’ /login
+/org/listings
+Organisation
+As above
+â€”
+/org/listings/new
+Organisation
+As above
+â€”
+/org/listings/:id
+Organisation
+As above
+â€”
+/suspended
+Any
+Shown only to suspended users
+â€”
+* (404)
+Any
+No match
+404 screen with home button
+1.2 Route Guard Behavior (UI Perspective)
+Guards are evaluated before any page content renders. During guard evaluation a full-screen loading state is shown 
+(see Global Layout Â§2.3). Guards run top-down; the first failing condition wins.
+No JWT present
+Redirect to /login immediately. No flash of content. No error toast.
+JWT present but expired
+Redirect to /login. Show toast: 'Your session expired. Please log in again.'
+JWT present, email unverified
+Redirect to /login. Show toast: 'Please verify your email first.' Offer resend link in toast.
+JWT present, onboarding incomplete
+Redirect to /onboarding. No toast.
+JWT present, user suspended
+Redirect to /suspended. Show suspension notice screen.
+Correct JWT but wrong role
+Redirect to role-appropriate home. Show toast: 'You don't have access to that page.'
+1.3 Navigation Transitions
+All route transitions use a consistent entrance pattern. No transition should feel abrupt.
+Transition Type
+Trigger
+Behavior
+Push (standard navigate)
+Link tap / programmatic push
+New page fades in over 150ms. Outgoing page fades out simultaneously. Easing: ease-out.
+Replace (redirect)
+Guard failure / post-auth
+New page fades in at 100ms. No back-navigation entry added to browser history.
+Modal open
+Button / chip tap
+Backdrop fades in at 200ms. Modal slides up from bottom on mobile (300ms, spring easing), scales up from center on 
+desktop (200ms, ease-out). Focus moves to first interactive element inside modal.
+Modal close
+Backdrop click / Escape / close button
+Reverse of open. Backdrop fades out 150ms. Focus returns to trigger element.
+Tab change (within page)
+Tab tap
+Active tab indicator slides horizontally to new position (200ms, ease-in-out). Content cross-fades at 150ms.
+Accordion expand
+Row click
+Content area slides down (max-height transition, 250ms, ease-out). Chevron icon rotates 180Â°.
+Accordion collapse
+Row click
+Content slides up (200ms, ease-in). Chevron rotates back.
+1.4 Navigation Patterns by Role
+Student â€” Persistent Bottom Navigation (Mobile) / Top Navigation (Desktop)
+On mobile (<768px), a bottom navigation bar with 5 tabs is always visible within /app/*: Feed, Calendar, Dashboard, 
+Notifications, Settings. On desktop (â‰¥768px) the navigation moves to a horizontal top bar. The active tab indicator 
+is always visible.
+Bottom Nav Tab
+Route
+Feed (home icon)
+/ app/feed
+Calendar (calendar icon)
+/ app/calendar
+Dashboard (checklist icon)
+/ app/dashboard
+Notifications (bell icon â€” with badge)
+/ app/notifications
+Settings (person icon)
+/ app/settings
+Admin â€” Persistent Left Sidebar Navigation
+On all viewports â‰¥768px: a fixed left sidebar (240px wide) is permanently visible. On mobile: sidebar collapses to a 
+hamburger-triggered drawer that slides in from the left (300ms, ease-out) with a dark backdrop.
+Sidebar Group
+Items
+Content
+Listings, Submission Queue (badged), Staleness Queue (badged)
+Organisation
+Sources / Organisations
+Taxonomy
+Domain Tags
+Knowledge
+Guides
+System
+Users, Audit Log
+Organisation â€” Minimal Top Navigation
+A top bar with the organisation name, a 'My Listings' link, and a logout button. No sidebar. Clean, focused interface.
+1.5 Deep Linking & State Persistence
+Browse All filters
+/app/feed?domain[]=frontend&type[]=internship â€” All active filter state is encoded in URL query params. On hard 
+refresh, filters are restored from URL before first API call.
+Notification target
+payload.actionUrl in a notification always resolves to /app/listing/:id. Tapping the notification navigates there and 
+marks the notification read simultaneously.
+Admin audit filter
+/admin/audit?category=listing&referenceId=XYZ â€” referenceId pre-filters the table to one entity's history.
+Onboarding resume
+If user refreshes during onboarding, the form saves step progress to sessionStorage. On return, the step picker shows 
+the last completed step.
+2. Global Layout System
+2.1 Page Container Hierarchy
+All screens share a root container structure. Understanding this hierarchy is prerequisite to screen-level specs.
+Sub-Element
+Description
+Conditional
+<AppShell>
+Root wrapper. Manages layout mode (authenticated vs public). Handles global keyboard shortcuts (Escape for modals, ? 
+for keyboard help).
+Always present
+<RouteGuard>
+Evaluates guard conditions before rendering children. Shows <PageLoader> during evaluation.
+Always present
+<PageLoader>
+Full-screen centered spinner with subtle background. Blocks interaction. Not branded â€” generic loading state.
+During guard eval + initial data load
+<NavBar>
+Top navigation bar (student desktop + public pages). Fixed, z-index above page content.
+/app/*, public pages
+<Sidebar>
+Left navigation sidebar (admin). Fixed, 240px wide. Has internal scroll if items overflow.
+All /admin/* routes on â‰¥768px
+<PageContent>
+Main scrollable area. Left-padded on admin (240px offset). Bottom-padded on mobile student (60px for bottom nav).
+All authenticated pages
+<PageHeader>
+Sticky top area within PageContent. Contains page title, primary action buttons, and breadcrumb on admin.
+Per-screen, optional
+<GlobalToastRegion>
+Fixed bottom-right (desktop) or bottom-center (mobile). Stacks up to 3 toasts. Newest on top.
+Always present
+<ModalBackdrop>
+Full-screen semi-transparent overlay. Sits above all page content but below the modal panel itself.
+When any modal is open
+2.2 Responsive Breakpoints
+Breakpoint
+Width Range
+Layout Behavior
+Mobile
+< 640px
+Single column. Bottom nav. Full-width cards. Modals become bottom sheets. Tables scroll horizontally inside containers.
+Tablet
+640px â€“ 1023px
+Two-column feed grid. Sidebar collapses to hamburger drawer. Modals centered with 90% width.
+Desktop
+1024px â€“ 1279px
+Standard desktop layout. Sidebar fixed. Three-column feed grid. Modals at fixed width (560px standard, 840px wide).
+Wide
+â‰¥ 1280px
+PageContent max-width: 1200px, centered. Admin tables have more visible columns.
+2.3 Grid Behavior
+Feed listing cards
+Responsive grid: 1 col (mobile) â†’ 2 col (tablet) â†’ 3 col (desktop wide). Gap: 16px. Cards stretch to fill column.
+Admin listing table
+Full-width table. On mobile, table scrolls horizontally within a scroll container. A sticky left column (title) 
+remains visible.
+Onboarding steps
+Centered single column. Max-width: 600px. Horizontally centered with equal side padding.
+Dashboard metric cards
+3-across row on desktop, 1-across on mobile (stacked). Each card equal width.
+Calendar
+12-column horizontal scroll container on desktop. Stacked month rows on mobile.
+Split-pane guide editor
+50/50 horizontal split on desktop (â‰¥1024px). Single pane with tab toggle on mobile.
+2.4 Scroll Behavior
+Feed page
+Full page scroll (window scroll). Sections load top-to-bottom. Infinite scroll is NOT used â€” pagination with a 'Load 
+more' button in Browse All.
+Admin listing table
+Viewport scroll. Table header is sticky at the top of the scroll container.
+Listing detail
+Full page scroll. The action bar (Save/Apply/Ignore) becomes sticky at the bottom of the viewport on mobile once the 
+user scrolls past the original position of the buttons.
+Calendar
+The calendar container scrolls horizontally on desktop. On mobile, months stack vertically and the page scrolls 
+normally.
+Notifications list
+Contained scroll within the notification panel (not window scroll). Load more on scroll-to-bottom.
+Admin sidebar
+If sidebar items exceed viewport height, the sidebar section below the logo scrolls independently.
+2.5 Global Loading States
+Three types of loading states are used globally. Never show a blank/empty screen without one of these.
+Loading Type
+When Used
+Behavior
+PageLoader
+Route guard evaluation; initial authentication check
+Full-screen white overlay with a centered animated spinner (3-dot pulse, 1.2s loop). Fades in after 200ms to avoid 
+flash on fast connections.
+SkeletonScreen
+First data load for a known screen layout
+Renders the skeleton version of the screen's layout with shimmer animation. Replaced by real content when all primary 
+data resolves. Never use a spinner for screen-level data loads.
+InlineLoader
+Sub-component data fetching; lazy sections
+A 24px spinner centered within the component's bounds. Used for notification badge count, activity summary counts, 
+secondary sections.
+2.6 Global Toast System
+Toasts are the primary feedback mechanism for async operations. All toasts share consistent behavior.
+Toast types
+Success (green left border), Error (red left border), Warning (amber left border), Info (blue left border)
+Anatomy
+Left accent border (4px) + icon + title text + optional body text + optional action link + dismiss (Ã—) button
+Entry animation
+Slides in from the right edge + fades in. Duration: 300ms, ease-out spring.
+Auto-dismiss
+Success: 4000ms. Info: 5000ms. Warning: 6000ms. Error: stays until manually dismissed.
+Dismiss on click
+Slides out to the right + fades. Duration: 200ms, ease-in.
+Stacking
+Up to 3 toasts visible. New toasts push others up (200ms reflow animation). Oldest removed first if 4th arrives.
+Mobile positioning
+Full-width minus 32px horizontal margin. Anchored to bottom of screen, above bottom nav.
+Hover pause
+Hovering a toast pauses its auto-dismiss countdown. Countdown resumes on mouse-leave.
+2.7 Global Keyboard Shortcuts
+Escape
+Closes topmost modal/drawer/dropdown. If nothing is open, no effect.
+? (question mark)
+Opens a keyboard shortcuts help modal listing all available shortcuts.
+/ (slash)
+Focuses the search input if one exists on the current screen (admin listing manager).
+Cmd/Ctrl + S
+On admin curation panel: triggers save action if form is dirty.
+Arrow keys
+Navigate options within open dropdowns and tag pickers. Enter selects.
+Tab / Shift+Tab
+Standard focus ring navigation. Focus rings always visible (not hidden on mouse use).
+2.8 Global Error Boundary
+If a screen-level JS error occurs, the error boundary catches it and renders a fallback UI â€” a centered card with an 
+error illustration, a message ('Something went wrong on this page'), and two actions: 'Reload this page' and 'Go to 
+home'. The error is not shown in detail to the user. The navigation remains fully functional.
+3. Component Library
+All components are defined in isolation. Each component spec is reusable and referenced by screen specs in Section 4. 
+Components are listed from foundational primitives to complex composites.
+BUTTON
+COMPONENT  Â·  Primitive Â· Interactive
+Variants
+Primary
+High-emphasis action. One per view. e.g., 'Save', 'Continue', 'Publish'.
+Secondary
+Medium-emphasis. Paired with Primary. e.g., 'Cancel', 'Back'.
+Ghost
+Low-emphasis. Inline or icon-adjacent. e.g., 'Skip', 'Dismiss'.
+Danger
+Destructive action. e.g., 'Delete', 'Reject', 'Deactivate'.
+Icon-only
+Square. Icon with tooltip. No label. Used in compact spaces.
+Loading
+Replaces any variant's label with a spinner. Not a standalone variant â€” any variant can enter loading state.
+Anatomy
+Sub-Element
+Description
+Conditional
+Container
+Rounded-corner clickable area. Handles all pointer and keyboard events.
+Always
+Leading Icon
+Optional icon to the left of the label. 16px. Vertically centered.
+Optional
+Label
+Text string. Sentence case. Truncates with ellipsis if container too narrow.
+Always (except icon-only)
+Trailing Icon
+Optional icon to right. Used for dropdown-trigger chevron or external-link arrow.
+Optional
+Spinner
+Replaces label + icons during loading state. 16px animated ring.
+Loading state only
+Tooltip
+Appears below button on hover after 600ms delay. Only for icon-only variant.
+Icon-only variant only
+All States â€” All Variants
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Default
+â€”
+Full opacity. Standard background per variant.
+None
+â€”
+â€”
+Hover
+Mouse enter
+Slight background darken (8% opacity increase). Subtle shadow elevation gain. Cursor: pointer.
+Transition all
+â€”
+Active/Pressed
+Mouse down / Space/Enter key
+Background darkens further (16%). Scale: 0.97. Immediate.
+Transform + bg
+Haptic on mobile
+Focus
+Tab key / programmatic focus
+Visible focus ring: 2px solid offset 2px. Ring uses accessible contrast ratio â‰¥ 3:1 against any background. Never 
+suppressed.
+Instant
+â€”
+â€”
+Disabled
+disabled prop set
+Opacity 0.4. Cursor: not-allowed. No hover/press response. Tooltip shows reason if aria-label provided.
+None
+â€”
+â€”
+Loading
+Async action in flight
+Label replaced by spinner. Width locks to current width (no layout shift). Not interactive. cursor: wait.
+Fade-in spinner
+â€”
+Success
+Operation resolved successfully
+Spinner replaced by checkmark icon for 1200ms, then reverts to default label.
+Fade checkmark
+Success toast fired
+Error
+Operation failed
+Shakes horizontally (keyframe: Â±4px, 3 oscillations). Reverts to default label after animation.
+Shake keyframe
+Error toast fired
+Interaction Model
+Trigger
+UI Response
+Animation
+ms
+Feedback
+Propagation
+Click / Tap
+Fires onClick handler. Enters loading state if async. Prevents double-submission.
+Scale down
+â€”
+Stops propagation to backdrop
+Enter key (focused)
+Same as click
+Scale down
+â€”
+â€”
+Space key (focused)
+Same as click on button role
+Scale down
+â€”
+â€”
+Escape (while loading)
+No effect â€” loading state non-interruptible
+None
+â€”
+â€”
+â€”
+Hover (icon-only)
+Shows tooltip after 600ms delay
+Tooltip fade in
+â€”
+â€”
+Mouse leave (icon-only)
+Hides tooltip immediately
+Tooltip fade out
+â€”
+â€”
+INPUT FIELD
+COMPONENT  Â·  Primitive Â· Form
+Variants
+Text
+Single-line free text.
+Email
+Text with email keyboard on mobile. Email validation on blur.
+Password
+Text masked with bullets. Show/hide toggle icon in trailing slot.
+Textarea
+Multi-line. Vertically resizable. Min-height: 80px.
+Date Picker
+Opens native date picker on click. Formatted display value. Has a calendar icon in trailing slot.
+Search
+Leading search icon. Clear (Ã—) button appears when non-empty. Fires onChange with debounce (300ms) or onSubmit.
+Anatomy
+Sub-Element
+Description
+Conditional
+Label
+Floats above the input area (label-float pattern). Always visible once the field has focus or a value.
+Always
+Required Marker
+Asterisk (*) adjacent to label.
+When required=true
+Input Area
+Text input or textarea. Accessible via keyboard and screen reader.
+Always
+Leading Slot
+Icon or prefix text (e.g., currency symbol).
+Optional
+Trailing Slot
+Icon, action button (show/hide, clear, calendar).
+Variant-dependent
+Helper Text
+Appears below the field. Grey. Provides context ('At least 8 characters').
+Optional
+Character Count
+Bottom-right corner. Updates live. Shows 'N / MAX'.
+When maxLength set
+Error Text
+Replaces helper text. Red. Appears on validation failure.
+Error state only
+All States
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Default (empty)
+â€”
+Border: subtle. Label in placeholder position (inside field).
+None
+â€”
+â€”
+Default (filled)
+Value present
+Label floats above. Border: subtle.
+Label float
+â€”
+Hover
+Mouse enter
+Border accent thinly (slightly more prominent).
+Border transition
+â€”
+Focus
+Click / Tab
+Border becomes prominent (2px accent). Label floats if not already. Cursor: text.
+Border + label float
+â€”
+Disabled
+disabled prop
+Reduced opacity (0.5). Cursor: not-allowed. Not focusable. Background: slightly tinted.
+None
+â€”
+â€”
+Read-only
+readOnly prop
+Visually similar to filled but slightly muted. Not editable. Focus ring still visible.
+None
+â€”
+â€”
+Error
+Validation fails on blur / submit
+Border: red. Error text appears below. Label: red. Icon (!) in trailing slot for severity.
+Shake (optional)
+400ms
+Error text shown
+Success
+Explicit valid state (e.g., email unique check)
+Border: green. Checkmark in trailing slot.
+Fade checkmark
+â€”
+Loading
+Async validation in flight
+Spinner in trailing slot. Field still editable.
+Fade spinner
+â€”
+Interaction Model
+Trigger
+UI Response
+Animation
+ms
+Feedback
+Propagation
+Click on field
+Focuses input. Label floats. Cursor appears.
+Label float
+â€”
+â€”
+Typing
+Updates value. Helper text persists. Character count updates live.
+None
+â€”
+â€”
+â€”
+Blur
+Runs validation. On fail: error state. On pass: reverts to filled state.
+State transition
+Error text if invalid
+â€”
+Clear button click (Search)
+Clears value. Re-focuses input.
+Value clear
+â€”
+Stops propagation
+Show/Hide toggle (Password)
+Toggles masking. Icon switches.
+Fade icon
+â€”
+Stops propagation
+Enter key (Search)
+Fires onSearch immediately (bypasses debounce).
+None
+â€”
+â€”
+â€”
+SELECT / DROPDOWN
+COMPONENT  Â·  Primitive Â· Form
+Variants
+Single Select
+One option at a time. Selected option shown in trigger.
+Multi Select
+Multiple options. Shows count badge ('3 selected') or comma list if â‰¤2 selections.
+Searchable
+Has an embedded search field that filters options in real-time as the user types.
+Native Select
+OS-native dropdown for simple cases (mobile-friendly). Not searchable.
+Anatomy
+Sub-Element
+Description
+Conditional
+Trigger
+Looks like a text input. Contains selected value(s). Trailing chevron icon rotates 180Â° when open.
+Always
+Dropdown Panel
+Floating panel that appears below the trigger. Max-height 240px with internal scroll. Has subtle elevation shadow.
+When open
+Search Input
+At top of dropdown panel. Autofocused when panel opens on searchable variant.
+Searchable only
+Option
+Single row. Leading checkbox on multi-select. Text. Optional leading icon.
+Each option
+Selected Indicator
+Checkmark trailing on single-select. Filled checkbox on multi-select.
+Selected options
+Empty State
+'No options found' message with search icon when search returns 0 results.
+When search empty
+Select All / Clear
+Action row at top of multi-select dropdown. Toggles all options.
+Multi-select only
+All States
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Default (closed)
+â€”
+Chevron pointing down. Placeholder or value shown.
+None
+â€”
+â€”
+Hover
+Mouse over trigger
+Trigger background slightly elevated.
+Bg transition
+â€”
+Open
+Click trigger / Enter key on focus
+Dropdown panel renders below (or above if no space). Chevron rotates 180Â°. Backdrop (transparent) catches 
+outside-clicks.
+Panel slide-down + fade
+â€”
+Option Hover
+Mouse over option
+Option background highlights.
+Bg transition
+â€”
+Option Selected (single)
+Click option
+Panel closes. Trigger shows selected value. Checkmark visible next to option.
+Panel slide-up + fade
+â€”
+Option Selected (multi)
+Click option
+Panel stays open. Checkbox checked. Count badge updates.
+Checkbox fill
+â€”
+Error
+Validation fails
+Trigger border: red. Error text below.
+Border transition
+â€”
+Disabled
+disabled prop
+Opacity 0.4. Trigger not clickable.
+None
+â€”
+â€”
+Loading options
+Options fetching
+Skeleton rows in dropdown panel instead of options.
+Shimmer
+â€”
+â€”
+Interaction Model
+Trigger
+UI Response
+Animation
+ms
+Feedback
+Propagation
+Click trigger
+Opens panel. Focus moves to panel (or search field if searchable).
+Slide + fade
+â€”
+â€”
+Outside click / Escape
+Closes panel. No selection change.
+Slide + fade
+â€”
+â€”
+Type in search
+Filters options in real-time (no debounce needed â€” synchronous filter).
+Instant
+â€”
+â€”
+â€”
+Arrow up/down (focused)
+Moves highlight through options. Wraps at top/bottom.
+Instant
+â€”
+â€”
+â€”
+Enter (option highlighted)
+Selects highlighted option.
+Selection anim
+â€”
+â€”
+TOGGLE / SWITCH
+COMPONENT  Â·  Primitive Â· Form
+Anatomy
+Sub-Element
+Description
+Conditional
+Track
+Rounded pill container. Changes fill when checked.
+Always
+Thumb
+Circle that slides within the track.
+Always
+Label
+Text to the right of the switch. Describes what the toggle controls.
+Always
+Helper Text
+Optional small text below label for context.
+Optional
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Off / Default
+â€”
+Thumb left-aligned. Track unfilled.
+None
+â€”
+â€”
+Hover (off)
+Mouse enter
+Track edge highlights slightly.
+Border transition
+â€”
+On
+Click or Enter
+Thumb slides right (200ms spring). Track fills.
+Slide + fill
+â€”
+Hover (on)
+Mouse enter
+Track slightly darker.
+Bg transition
+â€”
+Focus
+Tab
+Visible focus ring around entire switch.
+Instant
+â€”
+â€”
+Disabled (off)
+disabled prop
+Opacity 0.4. Not interactable.
+None
+â€”
+â€”
+Disabled (on)
+disabled prop (was on)
+Thumb right, track filled, opacity 0.4.
+None
+â€”
+â€”
+Loading
+Async save in flight
+Thumb shows mini spinner. Not interactable.
+Spinner fade
+â€”
+CHECKBOX
+COMPONENT  Â·  Primitive Â· Form
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Unchecked
+â€”
+Empty box with border.
+None
+â€”
+â€”
+Hover
+Mouse enter
+Border becomes accent. Subtle background fill.
+Border + bg
+â€”
+Checked
+Click / Enter
+Box fills with accent. Checkmark draws in with a short stroke animation.
+Stroke draw
+â€”
+Indeterminate
+Partial selection (parent of multi-select group)
+Dash (minus) icon in box.
+Fade
+â€”
+Focus
+Tab
+Focus ring around checkbox.
+Instant
+â€”
+â€”
+Disabled (unchecked)
+disabled prop
+Opacity 0.4.
+None
+â€”
+â€”
+Disabled (checked)
+disabled prop
+Filled, opacity 0.4. Not interactable.
+None
+â€”
+â€”
+BADGE / STATUS PILL
+COMPONENT  Â·  Display Â· Status
+Variants
+Status (listing state)
+upcoming | open | closed | cancelled | unknown â€” each with distinct icon + fill.
+Priority
+normal (no badge) | high (star icon) | dont-miss (flame icon + emphasis)
+Curated / Verified
+Checkmark shield icon. Shown on listings with isCurated:true.
+Stale Warning
+Warning triangle icon. Amber. Shown when isStale:true.
+Confidence
+Confirmed (solid dot) | Estimated (half dot) | Approximate (dashed dot) | Unknown (empty dot)
+Verification Level
+unverified (outline) | verified (filled check) | official (star) â€” for source/org display
+Role
+student | admin | source â€” compact label pills in user manager
+Count
+Numeric count. Used in navigation badges, table counts.
+Anatomy
+Sub-Element
+Description
+Conditional
+Container
+Rounded pill. Compact padding.
+Always
+Leading Icon
+16px. Variant-specific icon.
+Variant-dependent
+Label Text
+Capitalized. Short string.
+Always
+Count
+Right-aligned number.
+Count variant only
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Default
+â€”
+Variant-specific fill and label.
+None
+â€”
+â€”
+Hover (if clickable)
+Mouse enter
+Slight darken or scale 1.02.
+Scale + bg
+â€”
+Pulse animation
+dont-miss priority
+Subtle scale pulse (1.0 â†’ 1.04 â†’ 1.0) every 3s, 2 cycles only.
+Scale pulse
+3s loop
+â€”
+Stale
+isStale:true
+Amber fill. Warning icon.
+None
+â€”
+â€”
+LISTING CARD
+COMPONENT  Â·  Composite Â· Feed
+Anatomy
+Sub-Element
+Description
+Conditional
+Card Container
+Clickable area. Rounded corners. Subtle border. Hover elevation effect.
+Always
+Org Logo Area
+Square (40Ã—40). Shows orgLogoUrl if available, else shows initials avatar (first 2 letters of orgName). Fallback 
+renders initials in a filled circle.
+Always
+Priority Banner
+Thin top strip on dont-miss cards. Not shown for normal/high.
+dont-miss only
+Type Badge
+Compact pill (internship, hackathon, etc.)
+Always
+Title
+Primary text. 2-line clamp with ellipsis. 16px.
+Always
+Org Name
+Secondary text below title. 14px, muted.
+Always
+Tag Row
+Up to 3 DomainTag chips (compact). +N overflow if more.
+domainTags present
+Meta Row
+Stipend type pill + Location type pill side by side.
+Always
+Deadline Block
+Shows deadline with relative time ('Closes in 5 days'). Amber if â‰¤7 days. Red if â‰¤2 days.
+timeline.deadline present
+Confidence Chip
+'Confirmed' / 'Est. 2024' / 'Approx. 2022' compact chip below deadline.
+Non-null confidenceLevel
+Curated Badge
+Small verified indicator (shield checkmark) top-right corner of card.
+isCurated:true
+Stale Warning
+Small warning icon + 'Unverified data' tooltip. Top-right.
+isStale:true (admin view only)
+Save Button
+Ghost icon button (bookmark outline). Bottom-right of card. Not inside the card tap area.
+Student feed only
+Ignore Button
+Ghost icon button (Ã— outline). Adjacent to save.
+Student feed only
+Saved Indicator
+Bookmark filled. Replaces save button when saved.
+status:saved
+Applied Indicator
+Checkmark filled. Replaces save when applied.
+status:applied
+All States
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Default
+â€”
+Standard elevation. Org logo visible. All metadata shown.
+None
+â€”
+â€”
+Hover
+Mouse enter
+Card lifts (shadow increases). Scale: 1.01. Cursor: pointer.
+Transform + shadow
+â€”
+Active/Tap
+Mouse down / Touch
+Scale: 0.99. Shadow reduces.
+Transform
+â€”
+Saved
+User taps Save
+Save button icon fills (bookmark). Subtle background tint.
+Icon fill + bg tint
+Success micro-toast: 'Saved'
+Applied
+User taps Mark Applied
+Applied indicator shown. Save button hidden.
+Fade swap
+â€”
+Ignored
+User taps Ignore
+Card collapses with a slide-up + fade-out animation. Removed from DOM after animation.
+Slide up + fade
+â€”
+Closing soon
+deadline â‰¤ 7 days
+Deadline text turns amber. Deadline block has amber left border.
+None
+â€”
+â€”
+Closing urgent
+deadline â‰¤ 2 days
+Deadline text turns red.
+None
+â€”
+â€”
+Dont-miss
+priority:dont-miss
+Priority banner at top. Slight emphasis on card border.
+Pulse (2Ã—)
+â€”
+â€”
+Skeleton
+Loading
+All content areas replaced with shimmer rectangles of appropriate size.
+Shimmer
+â€”
+â€”
+Interaction Model
+Trigger
+UI Response
+Animation
+ms
+Feedback
+Propagation
+Click card body
+Navigate to /app/listing/:id
+Page transition
+â€”
+â€”
+Click Save icon
+POST activity. Icon fills immediately (optimistic). Rollback on fail.
+Icon fill
+'Saved' toast
+Stops propagation (does not navigate)
+Click Ignore icon
+Confirm not required. Card collapses immediately (optimistic). Rollback = card reappears with error toast.
+Slide + fade
+'Removed' toast
+Stops propagation
+Click Saved icon (again = unsave)
+DELETE activity. Icon reverts to outline.
+Icon unfill
+â€”
+Stops propagation
+Keyboard Enter (card focused)
+Navigate to listing detail
+Page transition
+â€”
+â€”
+DOMAIN TAG CHIP
+COMPONENT  Â·  Primitive Â· Display / Interactive
+Variants
+Display (read-only)
+Used on listing cards, listing detail. Not interactive unless clicking navigates to filtered feed.
+Filter Chip (active/inactive)
+Used in filter bars. Togglable. Active = filled. Inactive = outline.
+Picker Chip (selectable)
+Used in onboarding tag picker, settings, curation panel. Similar to filter chip but in a picker grid context.
+Removable
+Shows Ã— button on hover. Used in selected-tag list (e.g., listing curation panel active tags).
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Default
+â€”
+Tag text. Subtle border. Muted fill.
+None
+â€”
+â€”
+Hover (interactive)
+Mouse enter
+Border accent. Slight fill increase.
+Bg transition
+â€”
+Active / Selected
+Toggled on
+Filled. Text inverts or increases contrast.
+Fill transition
+â€”
+Focus
+Tab
+Focus ring.
+Instant
+â€”
+â€”
+Disabled
+inactive tag
+Opacity 0.4. Not interactable.
+None
+â€”
+â€”
+Remove hover
+Mouse over removable chip
+Ã— icon appears (fades in).
+Fade
+â€”
+Remove click
+Ã— clicked
+Chip fades + collapses (width transition).
+Fade + width
+â€”
+MODAL / DIALOG
+COMPONENT  Â·  Overlay Â· Interactive
+Variants
+Standard Dialog
+Confirmation or form. 560px wide on desktop. Full-screen on mobile.
+Alert Dialog
+Destructive confirmation only. Narrower (400px). Two buttons: Cancel + Danger action.
+Wide Dialog
+Complex forms, flag modal. 840px wide on desktop.
+Bottom Sheet (mobile only)
+On <640px viewports, all modals become bottom sheets that slide up from the bottom edge.
+Anatomy
+Sub-Element
+Description
+Conditional
+Backdrop
+Semi-transparent full-screen overlay. Click closes modal (unless form has unsaved state).
+Always
+Modal Panel
+White card with rounded top corners (bottom sheet) or all corners (dialog). Shadow elevation.
+Always
+Header
+Title (left) + Ã— close button (right). Bottom border separates from content.
+Always
+Body
+Scrollable content area. Max-height triggers internal scroll at ~60vh.
+Always
+Footer
+Action buttons. Right-aligned. Primary action rightmost. Cancel leftmost. Sticky at bottom of modal.
+When actions present
+Unsaved Indicator
+Title area shows 'â€¢ Unsaved changes' when form is dirty and user attempts to close.
+When form dirty + close attempt
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Closed
+â€”
+Not rendered.
+None
+â€”
+â€”
+Opening
+Trigger fires
+Backdrop fades in. Panel scales from 0.95 to 1.0 + fades in. Bottom sheet slides up.
+Scale + fade (sheet: slide)
+Focus trap activated
+Open / Idle
+â€”
+Static. Focus contained inside modal.
+None
+â€”
+â€”
+Loading (inside)
+Form submitting
+Footer primary button enters loading state. Other actions disabled.
+Button loading
+â€”
+Error (inside)
+Submit fails
+Error banner appears at top of modal body (red, dismissible).
+Banner slide-down
+Error toast also fires
+Closing
+Ã— / Escape / Backdrop click
+Reverse of opening animation.
+Scale + fade (sheet: slide)
+Focus returns to trigger
+Dirty close attempt
+Close attempted with unsaved changes
+Animation halts. An inline alert appears inside modal: 'Discard changes?' with Discard + Keep editing buttons.
+Alert shake
+â€”
+SKELETON LOADER
+COMPONENT  Â·  Display Â· Loading
+Skeletons replace content during the first data load. They mirror the geometric structure of the real component 
+without any actual data. The shimmer animation moves left-to-right across all skeleton elements simultaneously, 
+creating a wave effect.
+Shimmer animation
+Linear gradient highlight travels left â†’ right continuously. Duration: 1.8s per cycle. Loop infinite. Easing: 
+ease-in-out.
+Listing Card skeleton
+Org logo circle + 2 text lines (title + org) + 3 tag rects + deadline rect. All shimmer in sync.
+Notification item skeleton
+Icon circle + 2 text lines + timestamp rect.
+Activity row skeleton
+Title line + meta line + status badge rect.
+Admin table row skeleton
+5 cells, each a shimmer rect of appropriate column width.
+Profile settings skeleton
+Section header + 3 input field outlines + save button rect.
+Metric card skeleton
+Large number rect + label rect.
+Guide content skeleton
+Multiple text lines of varying widths (mimicking paragraph structure).
+EMPTY STATE
+COMPONENT  Â·  Display Â· Feedback
+Anatomy
+Sub-Element
+Description
+Conditional
+Illustration
+Simple line-art icon or spot illustration. Not photos. Centered.
+Always
+Heading
+Clear 1-line statement of what's empty. e.g., 'No saved listings yet.'
+Always
+Body Text
+Optional 1â€“2 lines of context or encouragement.
+Optional
+Primary CTA
+Optional action button. e.g., 'Browse opportunities'.
+Optional â€” context-dependent
+Empty State Inventory
+Feed â€” Recommended (no interests)
+'Set your interests to get personalised recommendations.' CTA: 'Update interests' â†’ /app/settings
+Feed â€” Closing Soon (none)
+'No listings closing soon. You're all caught up!' No CTA.
+Feed â€” Don't Miss (none)
+Section hidden entirely (not shown as empty â€” prevents visual noise).
+Feed â€” Browse All (filters active, no results)
+'No results for these filters.' CTA: 'Clear filters'.
+Activity Dashboard â€” Saved tab
+'Nothing saved yet. Start browsing to save listings.' CTA: 'Go to feed'
+Activity Dashboard â€” Applied tab
+'No applied listings yet. Mark a saved listing as applied when you submit.'
+Activity Dashboard â€” Missed tab
+'No missed listings. Great work staying on top of things!' (Positive framing.)
+Notifications (none)
+'You're all caught up. No notifications.' Small bell illustration.
+Admin queue (empty)
+'No pending submissions. The queue is clear.' Checkmark illustration.
+Admin staleness queue (empty)
+'All listings are up to date.' Checkmark illustration.
+Admin audit log (no results for filter)
+'No audit entries match these filters.' CTA: 'Clear filters'
+Org listing manager (no listings)
+'You haven't submitted any listings yet.' CTA: 'Submit your first listing'
+NOTIFICATION ITEM
+COMPONENT  Â·  Composite Â· Display
+Anatomy
+Sub-Element
+Description
+Conditional
+Container Row
+Full-width clickable row.
+Always
+Unread Indicator
+Solid dot (8px). Left-aligned.
+Unread only
+Type Icon
+24px icon by notification type: clock (deadline), flame (dont_miss), calendar (season), Ã—-circle (cancelled).
+Always
+Content Block
+Two-line: title (bold if unread) + message (1-line clamp).
+Always
+Timestamp
+Relative time ('2h ago'). Right-aligned. Updates live for items <1h old.
+Always
+Action Arrow
+Chevron right. Indicates tapping navigates somewhere.
+Always
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Unread
+â€”
+Unread dot visible. Title text bold. Subtle background tint.
+None
+â€”
+â€”
+Read
+Tapped or mark-all-read
+Dot disappears. Title weight normal. Background clears.
+Dot fade + bg clear
+â€”
+Hover
+Mouse enter
+Row background lightens slightly.
+Bg transition
+â€”
+Pressed
+Touch/click
+Row background darkens briefly.
+Bg transition
+â€”
+Expired
+TTL reached
+Item auto-disappears. If currently visible in list, fades out + collapses.
+Fade + height collapse
+â€”
+ACTIVITY ROW
+COMPONENT  Â·  Composite Â· Display
+Anatomy
+Sub-Element
+Description
+Conditional
+Container Row
+Full-width row. Click navigates to /app/listing/:id.
+Always
+Org Logo (small)
+24Ã—24 version of org logo or initials.
+Always
+Title
+Listing title. 1-line clamp.
+Always
+Org Name
+Secondary, muted.
+Always
+Status Badge
+Current UserActivity status: saved/applied/missed.
+Always
+Deadline Text
+Date or 'Closed'. Red if missed.
+deadline present
+Mark Applied Button
+Ghost button. Visible only on rows with status:saved.
+status:saved only
+Remove Button
+Ã— ghost icon. Visible on hover for non-missed rows.
+Non-missed on hover
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Default
+â€”
+Standard row. Status badge visible.
+None
+â€”
+â€”
+Saved
+status:saved
+Mark Applied button visible.
+None
+â€”
+â€”
+Applied
+status:applied
+Applied badge. No action buttons.
+None
+â€”
+â€”
+Missed
+status:missed
+Muted opacity (0.7). Missed badge. No action buttons.
+None
+â€”
+â€”
+Hover
+Mouse enter
+Background tint. Remove button fades in.
+Bg + fade
+â€”
+Mark Applied pressed
+Button click
+Status badge transitions savedâ†’applied (badge cross-fades). Button disappears.
+Badge swap
+â€”
+Removing
+Remove clicked
+Row height collapses. Fades out.
+Height + fade
+Undo toast (5s)
+TAG PICKER
+COMPONENT  Â·  Composite Â· Form
+Used in: onboarding step 2, profile settings interests, admin curation panel domain tags. Allows selection of up to N 
+items from a categorized set of tags.
+Anatomy
+Sub-Element
+Description
+Conditional
+Selection Counter
+'X of MAX selected' label at top. Updates live.
+Always
+Category Groups
+Tags grouped under their category label (role / skill / sector).
+Always
+Tag Chip Grid
+Wrapped chip grid within each group.
+Per group
+Selection Limit Notice
+Inline warning: 'Maximum of 5 reached. Remove one to select another.' Appears when limit hit.
+At max selection
+Clear All Link
+Bottom of picker. 'Clear all' resets all selections.
+When â‰¥1 selected
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Default
+â€”
+All tags unselected.
+None
+â€”
+â€”
+Chip selected
+Click unselected chip
+Chip enters selected state. Counter increments.
+Fill transition
+â€”
+Chip deselected
+Click selected chip
+Chip returns to default. Counter decrements.
+Fill transition
+â€”
+At maximum
+5 chips selected
+All unselected chips enter disabled-like state (faded, not-allowed cursor). Limit notice appears.
+Fade unselected
+â€”
+Clear all
+Click 'Clear all'
+All chips deselect. Counter resets.
+Batch fade
+â€”
+STEP PROGRESS INDICATOR
+COMPONENT  Â·  Display Â· Onboarding
+Anatomy
+Sub-Element
+Description
+Conditional
+Step Node
+Circle (32px). Number inside. Completed: filled. Active: outlined accent. Upcoming: outlined muted.
+Per step
+Connector Line
+Horizontal line between step nodes. Filled up to current step. Muted beyond.
+Between steps
+Step Label
+Below each node. Short text label for each step.
+Always
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Upcoming step
+Not yet reached
+Muted circle. Muted label. Muted connector.
+None
+â€”
+â€”
+Active step
+Current step
+Accent circle outline. Bold label. Gentle pulse (once on arrival).
+Scale pulse
+â€”
+Completed step
+Step passed
+Filled circle. Checkmark inside. Filled connector to next step.
+Fill + draw
+â€”
+CONFIRM DIALOG
+COMPONENT  Â·  Overlay Â· Destructive
+A specific modal variant used exclusively for irreversible or high-consequence actions. Always requires explicit user 
+confirmation.
+Anatomy
+Sub-Element
+Description
+Conditional
+Warning Icon
+Large icon (32px) in amber or red depending on severity. Centered above title.
+Always
+Title
+Bold. Describes the action. e.g., 'Deactivate this organisation?'
+Always
+Consequence Text
+1â€“3 sentences describing what will happen. Specific, not vague.
+Always
+Affected Data Summary
+Optional list of impacted items. e.g., 'This will affect 12 listings.'
+When quantifiable
+Cancel Button
+Secondary button. Always leftmost. Always labeled 'Cancel' â€” never 'No'.
+Always
+Confirm Button
+Danger button. Right side. Label mirrors the action: 'Deactivate', 'Reject', 'Delete', 'Reset'.
+Always
+Behavior: Both buttons dismiss the modal. Cancel fires no action. Confirm fires the action and puts the trigger button 
+in loading state until resolved.
+TIMELINE CARD
+COMPONENT  Â·  Composite Â· Display
+Appears on the Listing Detail screen. Presents all timeline information for a listing.
+Anatomy
+Sub-Element
+Description
+Conditional
+Card Container
+Bordered card with a calendar icon header.
+Always
+Status Row
+Open Date (if set) + Deadline side by side.
+At least one date present
+Deadline Block
+Date formatted as 'DD MMM YYYY'. Relative time in parentheses ('in 23 days'). Red if â‰¤2 days.
+deadline present
+Confidence Chip
+Inline chip: 'Confirmed' / 'Est. 2024' / 'Approx. 2022'. Tooltip explains what the label means.
+Non-null confidenceLevel
+Expected Window
+'Expected: March â€“ May' for recurring without confirmed dates.
+No confirmed dates but expectedStart/End set
+Prep Start Suggestion
+'Start preparing around [date]' computed from prepLeadWeeks Ã— 7 days before deadline.
+prepLeadWeeks set
+Last Cycle Label
+'Previous deadline: [date] (2024)' â€” shown in smaller text.
+lastDeadline present
+No Data State
+'Timeline data not yet confirmed.' with a neutral illustration.
+All timeline fields null
+FILTER BAR
+COMPONENT  Â·  Composite Â· Interactive
+Used in Feed Browse All section and Admin Listing Manager. Allows multi-dimensional filtering.
+Anatomy
+Sub-Element
+Description
+Conditional
+Filter Container
+Horizontal scrollable row of filter controls.
+Always
+Filter Chip (each filter)
+Compact trigger button. Shows active count in parentheses: 'Type (2)'. Opens a dropdown or popover.
+Per filter dimension
+Active Indicator
+Blue dot or accent fill when filter is active.
+Filter active
+Clear All
+Appears at end of row only when â‰¥1 filter is active.
+When any filter active
+Result Count
+'Showing N results' â€” updates after filter change. Fades in after 200ms debounce.
+Always
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Default (no filters)
+â€”
+All chips in outline/muted state. No clear-all.
+None
+â€”
+â€”
+Filter applied
+Selection made
+Chip fills. Count badge shows. Result count updates.
+Chip fill + count fade
+â€”
+All cleared
+'Clear all' clicked
+All chips revert to default. Clear-all disappears. Result count updates.
+Batch revert
+â€”
+Loading results
+Filter changed
+Result count shows spinner briefly.
+Spinner
+â€”
+PAGINATION
+COMPONENT  Â·  Composite Â· Navigation
+Anatomy
+Sub-Element
+Description
+Conditional
+Previous Button
+â† button. Disabled on page 1.
+Always
+Page Numbers
+Shows current Â± 2 pages. Ellipsis (â€¦) for skipped ranges. Max 7 items visible.
+When >1 page
+Next Button
+â†’ button. Disabled on last page.
+Always
+Page Size Select
+'Show: 10 / 20 / 50 / 100' dropdown. Admin only.
+Admin tables
+Total Count
+'Showing 21â€“40 of 234 results' label.
+Always
+Trigger
+UI Response
+Animation
+ms
+Feedback
+Propagation
+Previous / Next click
+Navigate to adjacent page. Scroll to top of list.
+Fade out + fade in
+â€”
+â€”
+Page number click
+Navigate to that page.
+Fade out + fade in
+â€”
+â€”
+Page size change
+Resets to page 1. Refetches with new limit.
+Fade out + fade in
+â€”
+â€”
+INLINE MARKDOWN RENDERER
+COMPONENT  Â·  Display Â· Content
+Used for listing descriptions and knowledge guide content. Renders a Markdown string to rich HTML. The renderer is 
+read-only. No editing in student-facing context.
+Supported Elements
+Headings (## ###)
+Rendered with appropriate size hierarchy. Excluded from page document heading hierarchy.
+Paragraphs
+Standard paragraph spacing.
+Bold / Italic
+Standard weight/style rendering.
+Unordered lists
+Bullet lists with proper indent.
+Ordered lists
+Numbered lists.
+Links
+Rendered as underlined text. All links open in new tab. External link icon appended.
+Code (inline)
+Monospace font, subtle background.
+Code blocks
+Full-width block. Horizontal scroll for overflow. No syntax highlighting in V1.
+Blockquotes
+Left border accent. Indented. Slightly muted text.
+Horizontal rules
+Thin separator line.
+Images
+NOT rendered (stripped from output for security). Replaced with [image] placeholder.
+Raw HTML
+Stripped completely.
+METRIC CARD
+COMPONENT  Â·  Composite Â· Dashboard
+Anatomy
+Sub-Element
+Description
+Conditional
+Container
+Compact card. Clickable if it filters the list below.
+Always
+Count
+Large number (tabular-nums font feature). Animates up from 0 on first load (count-up animation, 800ms).
+Always
+Label
+Short text below count. e.g., 'Saved', 'Applied', 'Missed'.
+Always
+Icon
+Left-side icon. Variant-specific.
+Always
+Active Indicator
+Bottom border accent when this metric's filter is active.
+When filter active
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Default
+â€”
+Standard card.
+None
+â€”
+â€”
+Active (filter)
+Clicked
+Bottom border accent. Count bold. Background slightly tinted.
+Border appear
+â€”
+Hover
+Mouse enter
+Slight lift (shadow).
+Shadow transition
+â€”
+Loading
+Data fetching
+Count replaced by shimmer.
+Shimmer
+â€”
+â€”
+Zero state
+count:0
+Muted appearance. Non-interactive (clicking doesn't filter). Cursor: default.
+None
+â€”
+â€”
+ADMIN DATA TABLE
+COMPONENT  Â·  Composite Â· Admin
+Anatomy
+Sub-Element
+Description
+Conditional
+Table Container
+Full width. Horizontal scroll on mobile. Bordered.
+Always
+Sticky Header Row
+Column headers. Sticky at top of scroll container. Sort arrows on sortable columns.
+Always
+Sticky Left Column
+Title/Name column stays visible during horizontal scroll on mobile.
+Mobile only
+Row
+Alternating row fill. Hover: distinct background. Click: navigates to detail or opens panel.
+Each data row
+Sort Indicator
+Up/down arrows on sortable column headers. Active sort shows filled arrow.
+Sortable columns
+Bulk Select Column
+Checkbox column (leftmost). Header checkbox = select all visible.
+When bulk actions enabled
+Bulk Action Bar
+Appears above table when â‰¥1 row selected. Shows count + action buttons.
+When rows selected
+Row Actions
+Icon buttons in rightmost column (edit, view, verify, deactivate). Hidden until row hover.
+Per row
+Badge Cells
+Status, priority, verification level shown as Badge components inline in cells.
+Relevant columns
+Stale Indicator Cell
+Red background on lastVerifiedAt cell when stale.
+isStale:true
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Default
+â€”
+Full table. Headers visible.
+None
+â€”
+â€”
+Row hover
+Mouse over row
+Row background lightens. Row actions fade in.
+Bg + fade
+â€”
+Row selected
+Checkbox click
+Row background tints accent lightly. Bulk action bar appears.
+Bg tint + bar slide
+â€”
+All selected
+Header checkbox
+All rows tint. Count shows 'N selected'.
+Batch tint
+â€”
+Sorted ASC
+Column header click
+Arrow fills up. Rows reorder with fade.
+Fade + reorder
+â€”
+Loading more
+Pagination change
+All rows replace with skeleton rows.
+Skeleton fade in
+â€”
+Empty
+No data / no results
+Full empty state component replaces table body.
+Fade in
+â€”
+SPLIT PANE EDITOR
+COMPONENT  Â·  Composite Â· Admin Guide Authoring
+Used exclusively on /admin/guides/:id. Two panels side by side: raw Markdown input (left) and rendered live preview 
+(right).
+Anatomy
+Sub-Element
+Description
+Conditional
+Panel Container
+Two equal-width panels. Divider bar between them.
+Always (desktop)
+Editor Panel
+Monospace textarea. Line numbers. Scroll sync with preview.
+Always
+Preview Panel
+Markdown-rendered HTML. Updates 200ms after editor stops receiving keystrokes (debounced).
+Always
+Divider Handle
+Draggable vertical bar between panels. Cursor: col-resize. Min 30% / Max 70% for either panel.
+Desktop only
+Tab Toggle
+On mobile: 'Edit' | 'Preview' tab row replaces split layout.
+Mobile only
+Word Count
+Bottom-left of editor. Updates live.
+Always
+Toolbar (optional)
+Icon buttons for bold, italic, list, link. Insert Markdown syntax.
+Optional
+State
+Trigger
+Visual Change
+Animation
+Duration
+Feedback
+Default
+â€”
+50/50 split. Editor focused on open.
+None
+â€”
+â€”
+Typing
+Keystrokes in editor
+Preview updates after 200ms of inactivity.
+Fade update
+â€”
+Divider dragging
+Mousedown on divider
+Both panels resize fluidly. No content reflow during drag.
+Continuous resize
+â€”
+â€”
+Sync scroll
+Editor scrolled
+Preview panel scrolls proportionally.
+Smooth scroll
+â€”
+4. Screen-by-Screen Breakdown
+Every screen is fully specified: layout, component inventory, interaction model, micro-interactions, and all edge 
+cases.
+4.1 Login Screen
+/login
+Public â€” All User Types
+Layout Structure
+Container
+Vertically and horizontally centered card. Max-width 400px. Centered on full-page.
+Logo / Brand Area
+At top of card. Platform name + tagline.
+Form Area
+Email input + Password input + Remember me checkbox + Submit button.
+Secondary Links
+'Forgot password?' (ghost link, right-aligned). 'Don't have an account? Sign up' (below button).
+Resend Verification
+Conditionally shown: if user attempts login with unverified email, an inline banner appears offering 'Resend 
+verification email' link.
+Interaction Model
+Trigger
+UI Response
+Animation
+ms
+Feedback
+Propagation
+Page load
+Form renders. Email field auto-focuses if no value from prior navigation.
+Fade in
+â€”
+â€”
+Type in email
+Standard input behavior. No validation on type.
+None
+â€”
+â€”
+â€”
+Blur email field
+Validate email format. Show error if invalid.
+Error state
+Error text
+â€”
+Type in password
+Input masked. No in-flight validation.
+None
+â€”
+â€”
+â€”
+Click Submit
+Form validates all fields. If invalid: error states on each field + shake animation. If valid: submit button enters 
+loading state. Call to login API.
+Loading state
+â€”
+â€”
+Login success (student)
+If onboardingComplete:false â†’ navigate to /onboarding. Else â†’ navigate to /app/feed.
+Page transition
+â€”
+â€”
+Login success (admin)
+Navigate to /admin/listings.
+Page transition
+â€”
+â€”
+Login success (org)
+Navigate to /org/listings.
+Page transition
+â€”
+â€”
+Login fail (wrong password)
+Error toast: 'Incorrect email or password.' Submit button returns to default. Shake animation on form.
+Toast + shake
+â€”
+â€”
+Login fail (unverified email)
+Inline banner appears inside form card: 'Email not verified. Check your inbox or [resend].'. No redirect.
+Banner slide-down
+â€”
+â€”
+Resend verification click
+Button enters loading state. API call. Success: banner text changes to 'Verification email sent!'. Already verified: 
+navigate to feed.
+Button loading
+â€”
+â€”
+'Forgot password?' click
+Navigate to /forgot-password (separate screen, not in MVP scope â€” show 'Feature coming soon' toast).
+Toast
+â€”
+â€”
+â€”
+Edge Cases
+Already logged in (JWT valid)
+Redirect away immediately (see guard logic Â§1.2).
+Suspended account login
+Show specific error toast: 'Your account has been suspended. Contact support.'
+Password field pasted (autofill)
+Masked bullets appear immediately. No special behavior.
+Long email (>100 chars)
+Input accepts and validates normally. No display overflow.
+Form submit with empty fields
+Both fields show error state simultaneously. Focus moves to first invalid field.
+4.2 Sign Up Screen
+/signup
+Public â€” Student Only
+Layout Structure
+Container
+Same centered card as login. Max-width 400px.
+Form Fields
+Name â†’ Email â†’ Password (with show/hide) â†’ Confirm Password.
+Password Strength Meter
+4-segment bar below password field. Updates live as user types. Labels: Weak / Fair / Good / Strong.
+Terms Note
+Small text below button: 'By signing up, you agree to our Terms of Service.'
+Login Link
+'Already have an account? Log in' below the card.
+Validation Rules (UI-enforced on blur)
+Name
+Required. Non-empty. Min 2 characters. Max 80 characters.
+Email
+Required. Valid email format. On blur: shows 'Checking availabilityâ€¦' (inline spinner, 500ms debounce). Then: 'Email 
+is available' (green) or 'Email already registered' (error + 'Log in instead?' link).
+Password
+Min 8 characters. At least 1 number OR 1 special character (soft guidance, not blocking in V1). Strength meter updates 
+live.
+Confirm Password
+Must match Password field exactly. Validates on blur of this field or on password change.
+Post-Submit State
+On successful signup: the form card transitions to a success state. The form fields fade out (200ms) and are replaced 
+by a checkmark icon + heading 'Check your email' + body 'We sent a verification link to [email]. It expires in 24 
+hours.' + a 'Resend email' ghost button. No navigation away â€” user must verify email.
+Edge Cases
+Duplicate email submission
+409 response: email field shows error 'This email is already registered.' with a 'Log in instead' link inline.
+Network error during signup
+Error toast. Button reverts. Form data preserved.
+Very long name
+Input accepts. Display truncates in the success state.
+Password confirm mismatch
+'Passwords don't match' error on confirm field. Submit button disabled until resolved.
+Form abandoned mid-fill
+No special behavior. Data lost on navigation (standard browser behavior).
+4.3 Onboarding Flow
+/onboarding
+Student â€” Post-verification, Pre-feed
+3-step wizard. Cannot be skipped. Cannot navigate to /app/* until complete. Progress is saved to sessionStorage â€” if 
+user refreshes, they return to the correct step.
+Layout Structure
+Outer container
+Centered column. Max-width 600px. Generous vertical padding.
+Step Progress Indicator
+At top. Shows 3 steps (see Â§3 Step Progress Indicator). Updates after each step completion.
+Step Card
+White card containing the step's form content.
+Navigation Buttons
+'Back' (secondary, hidden on step 1) + 'Continue' / 'Complete' (primary, rightmost). Sticky at bottom on mobile.
+Skip link
+NOT available â€” onboarding is mandatory.
+Step 1 â€” Academic Profile
+Heading
+'Tell us about your studies'
+Branch Select
+A searchable select dropdown. Options: institution's enumerated branch list. Required. Placeholder: 'Select your 
+branchâ€¦'
+Current Year Selector
+Horizontal segmented control: 1 | 2 | 3 | 4 | 5 | 6. Single select. Required. Each segment is a radio-button-styled 
+chip.
+Helper text (year)
+'Not sure? Pick the year you're currently enrolled in.' Below the selector.
+Validation
+Both fields required before Continue is enabled. Continue button is disabled until both selected.
+Step 2 â€” Domain Interests
+Heading
+'What are you interested in?'
+Sub-heading
+'Pick up to 5 areas. We'll personalise your opportunity feed.'
+Tag Picker
+Full tag picker component (see Â§3). Groups by category. Max 5 selected. Tags loaded live.
+Minimum
+No minimum â€” student can proceed with 0 selections (feed will show unfiltered recommendations).
+Empty tag list
+If tags fail to load: 'Could not load interest tags. You can set these later in settings.' Continue enabled.
+Step 3 â€” Notification Preferences
+Heading
+'Stay in the loop'
+Sub-heading
+'Choose what you'd like to be notified about. You can always change this in settings.'
+Toggle List
+Four toggles (all on by default): Deadline reminders (3 days + 1 day before) / Upcoming season alerts / Don't-miss 
+opportunity alerts / Cancellation alerts.
+Email Toggle
+Separate toggle at bottom: 'Also send notifications by email'. Toggles emailEnabled.
+Complete Button
+Primary button: 'Start exploring'. On click: PUT /api/user/onboarding. Button enters loading state. On success: 
+navigate to /app/feed with 'Welcome!' toast.
+Step Transition Animations
+Forward (Continue click)
+Step card slides left and fades out (150ms). New step card slides in from right and fades in (200ms). Progress 
+indicator updates (filled node grows, connector fills).
+Back click
+Reverse: current card slides right out, previous card slides in from left.
+Edge Cases
+Refresh on step 2
+Step position saved to sessionStorage. User returns to step 2 with step 1 data preserved.
+Tag load failure
+Graceful degradation â€” step 2 shows error state with 'Try again' button.
+onboardingComplete:true user lands here
+Guard redirects to /app/feed immediately.
+Complete API fails
+Toast: 'Something went wrong. Please try again.' Button reverts. User stays on step 3.
+4.4 Main Feed
+/app/feed
+Student
+Layout Structure
+Page Header
+Platform logo + notification bell (with badge) + settings icon. Fixed top. Student name shown on desktop.
+Tracking Strip
+Horizontal strip below header: Saved (N) Â· Applied (N) Â· Missed (N). Clickable â€” taps navigate to /app/dashboard 
+with the tapped filter active.
+Four Sections
+Stacked vertically: (1) Closing Soon, (2) Recommended for You, (3) Don't Miss, (4) Browse All.
+Browse All Filter Bar
+Sticky below the tracking strip. Visible throughout Browse All scroll.
+Loading Sequence
+Three API calls fire in parallel on mount: feed/sections, activity/summary, notifications/unread-count. While loading: 
+skeleton cards appear in all three named sections (2 skeletons each). Browse All shows 6 skeleton cards in grid. 
+Tracking strip shows 3 inline spinner badges. Notification badge shows spinner. Real content replaces skeletons as 
+each data stream resolves. Sections that resolve faster appear earlier â€” they don't wait for each other.
+Section: Closing Soon
+Heading
+'Closing Soon' + clock icon. Subtitle: 'Deadlines in the next 7 days.'
+Layout
+Horizontal scroll row (3 cards visible, peek of 4th to signal scrollability). Snap scroll.
+Card variant
+Standard Listing Card. Deadline block is prominent â€” shows 'X days left'.
+Empty state
+If no listings: 'No listings closing soon. You're up to date!' â€” no card, just inline text. Section does not take up 
+visual space.
+Max items
+5. No 'Load more'.
+Section: Recommended for You
+Heading
+'Recommended for You' + sparkle icon. Subtitle: 'Based on your interests and eligibility.'
+Layout
+3-column grid (desktop), 2-col (tablet), 1-col (mobile).
+Card variant
+Standard Listing Card. Tag matches to user's interests are highlighted (slightly different chip fill).
+Empty state
+'Set your interests for better recommendations' with a CTA to settings. Shown if interests array is empty.
+Fallback behavior
+If < 3 results with strict filter, year filter is relaxed silently. No UI indication that relaxation occurred â€” just 
+more results.
+Freshness indicator
+A small 'Updated X min ago' text at section bottom right. Shows when the cache was last populated.
+Max items
+8. No 'Load more' in this section.
+Section: Don't Miss
+Heading
+'Don't Miss' + flame icon. High urgency visual treatment on section heading.
+Layout
+Horizontal row (up to 3 cards). Or stacked column on mobile.
+Card variant
+Listing Card with dont-miss priority banner active.
+Empty state
+Section is fully hidden when empty (no heading, no placeholder).
+Max items
+3.
+Section: Browse All
+Heading
+'Browse All' + count badge ('234 opportunities').
+Filter Bar
+Domain (multi-select chip) | Type (multi-select chip) | Stipend (single select) | Location (single select). Filter 
+state persists in URL query params.
+Layout
+3-col grid (desktop), 2-col (tablet), 1-col (mobile).
+Load More
+'Load more' button at bottom of section (not infinite scroll). Appends next page of results.
+Sort
+Default: priority desc, deadline asc. No manual sort control in V1.
+Filter change behavior
+Cards fade out (100ms). Skeleton cards appear. New results fade in (150ms). Result count badge updates. If no results: 
+empty state component.
+Micro-Interactions
+Closing Soon carousel scroll
+Finger/mouse scroll left-right. Snap to card boundaries. Scroll indicator dots below carousel.
+Save card (any section)
+Bookmark icon fills with spring animation. No navigation. Count in tracking strip increments immediately.
+Ignore card
+Card collapses (slide up + fade, 300ms). Adjacent cards fill the gap smoothly.
+Notification badge appear
+If count goes from 0 to N: badge bounces in (scale 0â†’1.2â†’1, 300ms).
+Tracking strip count update
+Count numbers animate up/down (flip transition, 200ms) when changed.
+Edge Cases
+All four sections empty
+This indicates new user with no interests and no active listings. Show a welcome onboarding nudge card: 'The platform 
+is warming up. Check back soon or update your interests.'
+Feed load fails
+Error toast. Retry button appears in place of skeleton cards: 'Failed to load feed. [Retry]'
+Partial section load failure
+Sections that loaded successfully render. Failed sections show an inline error strip: 'Couldn't load this section. 
+[Retry]'
+User ignored all recommendations
+Recommended section shows 'You've dismissed all recommendations. [Undo all]' link.
+Long title in card
+Clamped to 2 lines with ellipsis. Full title visible in tooltip on hover.
+orgLogoUrl broken image
+Falls back to initials avatar immediately on image error event.
+4.5 Listing Detail
+/app/listing/:id
+Student
+Layout Structure
+Back Navigation
+'â† Back' link at top. Returns to previous page (not hardcoded to feed).
+Header Block
+Logo | Title | Org Name | Type badge | Stipend pill | Location pill.
+Status + Badges Row
+Status pill + Curated badge (if applicable) + Stale warning (if applicable).
+Action Bar
+Save / Mark Applied / Ignore buttons. Sticky bottom on mobile once scrolled past original position.
+Content Sections
+Description (markdown rendered) â†’ Timeline Card â†’ Eligibility Block â†’ Source Attribution â†’ Flag + External 
+Link row.
+Prep Guide Banner
+Appears between Timeline and Eligibility if guideId is set: 'A prep guide is available for this listing. [View Guide 
+â†’]'
+Header Block â€” Micro-behaviors
+Org logo
+40Ã—40 on mobile, 56Ã—56 on desktop. Falls back to initials avatar.
+Type badge
+Non-interactive display badge.
+Stipend + Location pills
+Side-by-side compact pills. 'Not specified' shown when value is 'unknown'.
+Action Bar States
+Trigger
+UI Response
+Animation
+ms
+Feedback
+Propagation
+No activity
+Save (primary) + Ignore (ghost). Mark Applied hidden.
+None
+â€”
+â€”
+â€”
+Status: saved
+Save shows as 'Saved' (filled icon, accent). Mark Applied button appears. Ignore becomes 'Remove'.
+Transition
+â€”
+â€”
+Status: applied
+Applied indicator (checkmark, filled). Notes textarea appears below. Save and Ignore hidden.
+Fade
+â€”
+â€”
+Status: missed
+All buttons disabled. Banner: 'You missed this one. Deadline has passed.' Muted styling.
+None
+â€”
+â€”
+â€”
+Tap Save
+POST activity. Optimistic. Action bar transitions to 'saved' state.
+Transition
+'Saved!' toast
+â€”
+Tap Mark Applied
+PUT activity. Status transitions to applied. Notes textarea fades in.
+Fade notes
+â€”
+â€”
+Tap Ignore
+PUT activity status:ignored. Page doesn't close â€” action bar shows 'Ignored. [Undo]' for 5s. Then fades to neutral.
+None
+â€”
+Undo toast 5s
+â€”
+Mobile sticky trigger
+User scrolls past action bar original position
+Action bar slides down from bottom (slide in, 200ms spring).
+Slide in
+â€”
+Notes Field (Applied state)
+A textarea labeled 'Your notes' appears with a fade-in (200ms) when status becomes 'applied'. Placeholder: 'Add notes 
+about your applicationâ€¦'. Autosaves on blur (PUT /api/activity/:listingId, debounced 500ms). A small 'Saved' 
+indicator (checkmark + text) appears briefly after save, then fades.
+Timeline Card Interaction
+Confidence tooltip
+Hovering the Confidence Chip shows a tooltip explaining the label: e.g., 'Based on last year's data. Actual dates may 
+vary.'
+Prep suggestion
+If prepLeadWeeks is set: 'Suggested prep start: around [calculated date]'. This date is a computed display only.
+No data state
+If all timeline fields are null: card shows 'Timeline not yet confirmed by admin. Check the external link for the 
+latest dates.'
+Eligibility Block
+Eligible match
+'You appear eligible' + green checkmark. Shown when user's year and branch match or when targetAudience arrays are 
+empty.
+Partial mismatch
+'Check eligibility' + amber warning icon. Shown when year matches but branch doesn't (or vice versa).
+No match
+'You may not be eligible' + red icon. Shown when neither year nor branch matches.
+Empty audience arrays
+'Open to all students' displayed.
+Listed criteria
+Branches listed as pills. Years listed as a compact range ('Year 2, 3, 4') or 'All years'.
+Flag Modal
+Trigger
+'Report an issue' ghost button at bottom of page.
+Modal contents
+Issue type select (required) + Optional 'What's the correct information?' textarea + Submit button.
+Issue types
+Dead link / Wrong deadline / Wrong eligibility / Duplicate / Other
+Submit success
+Modal closes. Small success toast: 'Thanks for reporting. We'll review this.' Flag button text changes to 'Reported' 
+and becomes disabled for this session.
+One flag per session
+After flagging, the flag button shows 'Reported' (disabled). On next page load it resets (one flag per session is the 
+UX limit; backend upserts).
+Edge Cases
+Listing not found (invalid ID)
+404 state: illustration + 'This listing doesn't exist or has been removed.' + 'Back to feed' button.
+Closed listing (no activity)
+Redirects to feed with toast: 'This opportunity has closed.'
+Cancelled listing
+If user has saved activity: page renders with a prominent 'Cancelled' status banner at top. All action buttons 
+disabled. Toast on arrive: 'This opportunity was cancelled.'
+External URL missing
+External link button shows as disabled with tooltip 'No external link available.'
+Very long description
+Markdown renders fully. No truncation. Collapsible section ('Show more') if content > 800 words.
+Guide linked but unpublished
+Prep guide banner does NOT show (guideId only linked if guide isPublished).
+4.6 Annual Calendar
+/app/calendar
+Student
+Layout Structure
+Page Header
+'Annual Calendar' heading + interest filter toggle (right side).
+Filter Toggle
+Two-option segment: 'All Listings' | 'My Interests'. Persists in URL (?filter=interests).
+Calendar Grid
+12 month columns on desktop. Stacked month cards on mobile. Current month scrolled-to on load.
+Legend
+Below calendar: color legend for chip types (opening / closing / upcoming).
+Month Column / Card Structure
+Month Header
+Month name + year (e.g., 'March 2026'). Current month has accent underline.
+Listing Chips
+Compact chips: org name + listing type icon. Green = opening this month. Amber = closing this month. Grey = other 
+activity in this month.
+Overflow handling
+If a month has >6 chips: shows 6 chips + '+N more' chip. Tapping '+N more' expands the month to show all.
+Empty month
+Displays 'No listings' in muted text. Month column / card still visible.
+Interaction Model
+Trigger
+UI Response
+Animation
+ms
+Feedback
+Propagation
+Page load
+Scroll to current month column (smooth, 400ms). Load skeleton chips while data fetches.
+Smooth scroll + skeleton
+â€”
+â€”
+Chip tap
+Navigate to /app/listing/:id.
+Page transition
+â€”
+â€”
+Filter toggle switch
+Filter applies immediately. Chips fade out â†’ new chips fade in (200ms). Non-matching chips disappear.
+Fade
+â€”
+â€”
+'+N more' tap
+Month expands vertically. Additional chips fade in. '+N more' chip replaced by 'Show less'.
+Expand + fade
+â€”
+â€”
+Month column hover (desktop)
+Month header highlights slightly.
+Bg transition
+â€”
+â€”
+Edge Cases
+No listings at all
+Show empty state with illustration: 'No opportunities in the calendar yet. Check back soon.'
+Interest filter with 0 interests set
+Show prompt: 'You haven't set any interests. Set interests to filter the calendar.' with CTA to settings.
+Interest filter returns no results
+Empty state: 'No listings match your interests this year.'
+Data load failure
+Skeleton replaced by error strip: 'Calendar data failed to load. [Retry]'
+Listing in multiple months
+Chip appears in each applicable month independently.
+4.7 Tracking Dashboard
+/app/dashboard
+Student
+Layout Structure
+Page Header
+'My Applications' heading.
+Metric Cards Row
+3 cards: Saved / Applied / Missed. Horizontal row. Clicking a card filters the list below.
+Activity List
+Full list of all UserActivity records. Sorted: applied first, saved second, missed last (within each group, sorted by 
+deadline asc).
+Active Filter Indicator
+When a metric card is active: 'Showing: Saved (12)' pill above the list.
+Interaction Model
+Trigger
+UI Response
+Animation
+ms
+Feedback
+Propagation
+Page load
+Activity list loads with skeleton rows. Metric card counts load in parallel (separate call).
+Skeleton rows
+â€”
+â€”
+Metric card click
+List filters to that status. Active card gets accent border. URL updates (?status=saved).
+Filter transition
+â€”
+â€”
+Metric card re-click
+Filter clears. Shows all statuses.
+Filter clear
+â€”
+â€”
+Row click (any status)
+Navigate to /app/listing/:id for that listing.
+Page transition
+â€”
+â€”
+Mark Applied button
+Row transitions from saved â†’ applied state. Metric counts animate.
+Row state swap
+â€”
+â€”
+Remove row (non-missed)
+Row collapses. Undo toast: 'Removed from your list. [Undo]' (5s). Metric count decrements.
+Collapse + toast
+Undo 5s
+â€”
+Undo remove
+Row re-appears with slide-down animation.
+Slide down
+â€”
+â€”
+Edge Cases
+Zero across all tabs
+Empty state: 'Start saving opportunities from the feed to track them here.' CTA: 'Go to feed'
+Zero in a specific tab
+Tab-specific empty state messages (see Â§3 Empty State Inventory).
+Listing since deleted
+Row shows '[Listing removed]' in title area. External link button hidden. Row still shows deadline and status. Remove 
+button available.
+Deadline field null
+'Deadline not set' shown in deadline area.
+Missed count > 10
+Amber nudge banner above missed section: 'You've missed N opportunities. Setting deadline reminders can help next 
+time.' Link to notification settings.
+4.8 Notifications
+/app/notifications
+Student
+Layout Structure
+Page Header
+'Notifications' heading + 'Mark all read' button (right-aligned, shown only when unread count > 0).
+Filter Tabs
+'All' | 'Unread' â€” tab row below header. Defaults to 'All'.
+Notification List
+Scrollable list. Unread items have distinct background. Grouped by date: 'Today', 'Yesterday', 'Earlier'.
+Load More
+At bottom: 'Load more notifications' ghost button. Appears only if more pages exist.
+Interaction Model
+Trigger
+UI Response
+Animation
+ms
+Feedback
+Propagation
+Tap notification (unread)
+Mark read (optimistic). Navigate to payload.actionUrl. Unread count badge decrements.
+Dot fade
+â€”
+â€”
+Tap notification (read)
+Navigate to payload.actionUrl only.
+Page transition
+â€”
+â€”
+Mark all read
+All unread dots fade. Backgrounds clear. Badge resets to 0.
+Batch fade
+â€”
+â€”
+Filter: Unread tab
+List filters to unread only. Count shown in tab label.
+Crossfade
+â€”
+â€”
+Filter: All tab
+Shows all. Unread + read mixed, grouped by date.
+Crossfade
+â€”
+â€”
+Load more
+Appends next page. Smooth content expansion.
+Fade append
+â€”
+â€”
+Notification Type Display
+deadline_3day
+Clock icon. Title: '[Listing Name] closes in 3 days'. Message: 'Don't forget to apply.'
+deadline_1day
+Clock icon (red). Title: '[Listing Name] closes tomorrow!' Message: 'Today is your last chance to apply.'
+dont_miss
+Flame icon. Title: 'Don't miss: [Listing Name]'. Message: 'Highlighted as a must-apply opportunity.'
+season_open
+Calendar icon. Title: '[Domain] season is opening'. Message: 'Listings in [domain] are starting to open.'
+cancelled
+X-circle icon (red). Title: '[Listing Name] was cancelled'. Message: 'This opportunity has been cancelled.'
+Edge Cases
+Linked listing deleted
+Notification still shows. payload is a snapshot so title/message preserved. Navigation taps show listing-not-found 
+screen gracefully.
+0 notifications
+Empty state (see Â§3 Empty State Inventory).
+0 unread notifications on 'Unread' tab
+'You're all caught up!' empty state. 'View all notifications' link switches to All tab.
+4.9 Profile Settings
+/app/settings
+Student
+Layout Structure
+Page Header
+'Settings' heading.
+Section Cards
+3 cards stacked: Profile, Interests, Notifications. Each card is an independent form section with its own Save button.
+Account Section
+Below cards: 'Change Password' button + 'Log out' button (danger/ghost).
+Profile Card
+Fields
+Name (text input) + Branch (searchable select) + Current Year (segmented control, same as onboarding).
+Dirty state
+When any field is changed: card header shows 'â€¢ Unsaved' indicator. Save button becomes enabled.
+Save behavior
+PUT /api/user/profile. Button enters loading. On success: success toast 'Profile updated.' Dirty indicator clears.
+Save fail
+Error toast. Fields retain new values. Dirty indicator stays.
+Interests Card
+Content
+Full tag picker component (see Â§3). Shows current interests pre-selected.
+Auto-save behavior
+Unlike profile, interests card auto-saves 800ms after the last chip interaction (debounced). No explicit Save button. 
+A 'Savingâ€¦' â†’ 'Saved âœ“' micro-indicator appears below the picker.
+Feed refresh note
+Below picker: small text 'Your feed recommendations update after saving.'
+Notifications Card
+Toggles
+5 toggles (see SRS Â§FR-PRF-03). Each auto-saves on change (300ms debounce). Micro-indicator below each toggle: 'Saved 
+âœ“' fades in then out after 2s.
+Email toggle
+Separated by a divider with label 'Email Notifications'. Turning off email hides the other toggles' email-sending 
+implications.
+Change Password Flow
+Trigger
+'Change Password' button opens a Standard Dialog modal.
+Modal fields
+Current Password + New Password + Confirm New Password.
+Validation
+New password: same rules as signup. Confirm must match. Current password validated server-side.
+Success
+Modal closes. Toast: 'Password changed successfully.'
+Wrong current password
+Inline error on Current Password field: 'Current password is incorrect.'
+Logout Flow
+Trigger
+'Log out' button.
+Confirm?
+No confirmation dialog â€” logout is non-destructive. Immediate.
+Behavior
+JWT cleared from localStorage. Navigate to /login. Toast: 'You've been logged out.'
+4.10 Prep Guide
+/app/guide/:id
+Student
+Layout Structure
+Back Navigation
+'â† Back to [Listing Name]' if navigated from listing. Otherwise 'â† Back'.
+Guide Header
+Title heading. No subheading.
+Content
+Full markdown-rendered body. Uses the Inline Markdown Renderer component (Â§3).
+Related Listings
+If linkedListings is populated: a 'Related Opportunities' section below the content. Shows compact listing cards 
+(title + org + type badge + action button). Links back to /app/listing/:id.
+Edge Cases
+Guide not published
+404 screen (see Â§1.1 guard).
+Guide with no linked listings
+'Related Opportunities' section omitted entirely.
+Guide with no content
+'This guide has no content yet.' placeholder.
+Very long guide
+Full render. A sticky 'Table of contents' sidebar (from ## headings) appears on desktop if content > 500 words.
+4.11 Admin â€” Listing Manager
+/admin/listings
+Admin
+Layout Structure
+Page Header
+'Listings' heading + 'New Listing' primary button (top right).
+Filter Bar
+Status | Priority | Curated | Stale toggles â€” all compact chip filters above the table.
+Listing Table
+Admin Data Table component (see Â§3). Columns: Checkbox | Title | Org | Status | Priority | Curated | Deadline | Last 
+Verified | Saves/Applies | Flags.
+Row click
+Navigates to /admin/listings/:id (curation panel).
+Bulk Action Bar
+Appears when rows are selected: 'N selected' + 'Mark stale' + 'Archive' buttons.
+Table Column Behaviors
+Title
+1-line clamp. Full title in tooltip on hover.
+Status
+Status Badge component.
+Priority
+Priority Badge. dont-miss has emphasis.
+Curated
+Checkmark icon (isCurated:true) or dash (false).
+Deadline
+Formatted date. Red if listing is open and deadline is within 7 days.
+Last Verified
+Date + red background cell if isStale:true.
+Saves/Applies
+'12 / 5' format (saves/applies). Non-sortable.
+Flags
+Count of pending DataFlags. Orange if >0. Clicking navigates to listing detail's flags section.
+Filter Behavior
+Status filter
+Multi-select. Options: upcoming / open / closed / cancelled / unknown. Default: no filter (all shown).
+Priority filter
+Multi-select. Options: normal / high / dont-miss.
+Curated filter
+Toggle: 'Curated only'.
+Stale filter
+Toggle: 'Stale only'.
+Filter combination
+All filters combine with AND logic. Result count updates after each change.
+Filter reset
+'Clear filters' appears when any filter active. Resets all.
+4.12 Admin â€” Curation Panel
+/admin/listings/:id  +  /admin/listings/new
+Admin
+Layout Structure
+Two-column layout (desktop)
+Left: form (70%). Right: engagement panel (30%). On tablet/mobile: single column, engagement panel below form.
+Left â€” Form Sections
+Stacked accordions: Content | Audience | Tags | Timeline | Status & Priority | Curation. Each accordion section can be 
+expanded/collapsed.
+Sticky Footer
+'Save' button (primary) + 'Discard changes' (ghost) always visible at bottom of form column. Version number shown: 
+'v4'.
+Right â€” Engagement Panel
+Saves count + Applies count + Ignores count + Pending flags list + Audit trail (last 10 entries).
+Page Header
+Breadcrumb: 'Listings > [title]'. Save status indicator: 'â€¢ Unsaved changes' when form is dirty.
+Form Sections Detail
+Content section
+Title (text input) + Description (markdown textarea â€” same editor as guide, no preview pane) + External URL (text) + 
+Org Name (text) + Org Logo URL (text + preview thumbnail) + Type (select) + Stipend (select) + Location (select).
+Audience section
+Branches (tag picker from branch enum, multi-select) + Years (checkboxes 1â€“6, labeled 'Year 1' through 'Year 6'). 
+Helper text: 'Leave empty to allow all branches/years.'
+Tags section
+Domain tag picker component (see Â§3). Auto-tag suggestion banner: 'Suggested tags: [X, Y] based on description. [Add 
+all]' â€” shown when description is long enough for inference.
+Timeline section
+scheduleType select + openDate date picker + deadline date picker + expectedStart/End month pickers (1â€“12 number 
+inputs) + lastDeadline date picker + prepLeadWeeks number input (0â€“52). Derived fields (confidenceLevel, 
+dataSourceYear) shown as read-only computed badges that update live as date fields change.
+Status & Priority section
+Status select dropdown (with visual state badges as options) + Priority select (with visual priority badges as 
+options). Warning shown when setting status=cancelled: 'This will notify all users who saved or applied to this 
+listing.'
+Curation section
+isCurated toggle + 'Mark as Verified' button (sets lastVerifiedAt to now â€” shown as 'Last verified: [date]') + 
+Linked guide select (searchable dropdown of published guides).
+Save Flow
+Trigger
+UI Response
+Animation
+ms
+Feedback
+Propagation
+Save button click
+Validates required fields. If invalid: error states on fields + accordion containing error auto-opens.
+Field errors
+â€”
+â€”
+All valid
+Save button enters loading state. Version sent with request.
+Loading
+â€”
+â€”
+Save success
+Toast: 'Listing saved.' Dirty indicator clears. Version number increments.
+Toast
+â€”
+Success toast
+â€”
+Version conflict (409)
+Toast: 'This listing was modified by someone else. Reload to see latest changes.' Save button reverts. Form NOT reset.
+Toast
+â€”
+Error toast
+â€”
+Cancel notification warning
+When statusâ†’cancelled: a Confirm Dialog fires before saving. Shows: 'This will notify N users who saved or applied. 
+Proceed?'
+Confirm dialog
+â€”
+â€”
+Cycle Reset Flow
+Visibility
+'Cycle Reset' danger button visible only in the Timeline section when: status=closed AND scheduleType is 
+recurring-annual or recurring-irregular.
+Trigger
+Click opens Confirm Dialog: 'This will archive this cycle's deadline as historical data, clear the current dates, and 
+set the listing back to Upcoming for re-curation. This cannot be undone.'
+Confirm
+POST cycle-reset API. Form reloads with updated state. Toast: 'Cycle reset. Listing is now Upcoming.'
+Engagement Panel
+Counts
+Live: Saves / Applies / Ignores â€” 3 metric cards in a compact row.
+Pending Flags
+Expandable list. Each flag shows: issueType badge + proposedFix text (if any) + reporter anon identifier + 'Resolve' 
+and 'Dismiss' ghost buttons.
+Resolve flag
+Marks flag status:resolved. Row fades out.
+Dismiss flag
+Marks flag status:dismissed. Row fades out.
+Audit Trail
+Last 10 entries as a compact list: timestamp + actor + action. 'View full history â†’' link navigates to 
+/admin/audit?referenceId=[listingId].
+New Listing Mode Differences
+Title
+Page header: 'New Listing'.
+Empty form
+All fields empty. Timeline section open by default (since it's a required fill).
+Engagement panel
+Hidden on new listing (no data yet).
+Breadcrumb
+'Listings > New Listing'.
+4.13 Admin â€” Submission Queue
+/admin/queue
+Admin
+Layout Structure
+Page Header
+'Submission Queue' + count badge ('12 pending').
+Queue Table
+Compact table: Submitted At | Title | Org Name | Type | Deadline (if provided) | Actions.
+Actions per row
+'Approve' (primary) + 'Reject' (danger ghost).
+Approve Flow
+Clicking Approve navigates to /admin/listings/:id (curation panel) with the submission pre-loaded. A banner at the top 
+of the curation panel reads: 'This listing was submitted by [Org Name]. Review and publish.' The listing status is 
+currently 'unknown'. Admin fills missing fields and saves with a real status.
+Reject Flow
+Trigger
+'Reject' button opens Confirm Dialog.
+Rejection reason
+Dialog includes a required text field: 'Reason for rejection (internal)'. Not shown to submitter.
+On confirm
+Row fades out + collapses. Count badge decrements. Toast: 'Submission rejected and archived.'
+Edge Cases
+Empty queue
+Full empty state: 'No pending submissions. The queue is clear.'
+Submission with no deadline
+Deadline cell shows 'â€”'. No urgency indication.
+4.14 Admin â€” Source / Organisation Manager
+/admin/sources
+Admin
+Layout Structure
+Page Header
+'Organisations' heading + 'Add Organisation' button.
+Table
+Name | Type | Verification Level | Listing Count | Active toggle | Actions (Verify, Deactivate).
+Verify Flow
+Trigger
+'Verify' button on row (when verificationLevel < official).
+Dropdown
+A small popover appears with 3 options: 'Mark as Verified' / 'Mark as Official' / 'Remove verification'. Confirmation 
+only required for Official.
+On select
+PUT /api/admin/sources/:id/verify. Verification level badge updates in row. Toast: '[Name] is now [level].'
+Deactivate Flow
+Trigger
+isActive toggle set to off OR 'Deactivate' button.
+Confirm dialog
+Shows: 'Existing listings from [Name] will remain visible to students. They will not be able to submit new listings.' 
+Cancel + Deactivate buttons.
+On confirm
+Row greys out. Active toggle shows off state. Toast: '[Name] deactivated.'
+4.15 Admin â€” DomainTag Manager
+/admin/tags
+Admin
+Layout Structure
+Page Header
+'Domain Tags' heading + 'Create Tag' button.
+Table
+Slug | Display Name | Category | Active Listings | User Interest Count | Active toggle | Retire button.
+Create Tag Form
+Inline form appears above table on 'Create Tag' click: Display Name input + Slug (auto-generated, editable) + Category 
+select + 'Add tag' button.
+Create Tag Inline Form
+Slug generation
+Slug auto-generates from displayName: lowercase, spacesâ†’hyphens, special chars stripped. User can edit. Real-time 
+slug preview shown.
+Validation
+Slug must be unique and URL-safe. Validated on blur.
+Submit
+Row appears in table below. Form resets. Toast: 'Tag [slug] created.'
+Retire Tag Flow
+Trigger
+'Retire' danger ghost button in row.
+Confirm dialog
+Shows: 'This tag is referenced by [X] listings and [Y] users. It will become inactive.' + optional replacement field: 
+'Replace with (optional)' â€” a searchable select of other active tags.
+With replacement
+System migrates all refs to the replacement slug. Progress toast: 'Migrating referencesâ€¦' then 'Tag retired and 
+references updated.'
+Without replacement
+Tag simply deactivated. Toast: 'Tag [slug] retired.'
+Row state after retire
+Row greys out. Active toggle shows off. 'Retire' button removed.
+4.16 Admin â€” Guide Authoring
+/admin/guides  +  /admin/guides/:id
+Admin
+List Screen Layout
+Page Header
+'Knowledge Guides' + 'New Guide' button.
+Table
+Title | Published toggle | Linked Listings count | Last updated | Edit button.
+Published toggle
+Inline toggle. Toggling unpublishedâ†’published fires a confirm: 'Publish this guide? Linked listings will show a prep 
+guide link.'
+Editor Screen Layout
+Header
+Title input (large, top) + breadcrumb + Save button (right) + Publish toggle (right).
+Split Pane
+Full Split Pane Editor component (see Â§3). Fills remaining screen height.
+Link Listings section
+Below split pane: 'Related Listings' search-and-select. Searchable by listing title. Selected listings appear as 
+removable chips.
+Link Tags section
+Domain tag picker. Multi-select. For general-purpose guides.
+Publish Flow
+Publish toggle on
+Confirm dialog: 'Publishing this guide will make it visible to students and link it to [N] listings.' Publish + Cancel.
+On confirm
+isPublished set to true. Toast: 'Guide published.' Linked listings receive guideId.
+Unpublish
+Confirm dialog: 'Unpublishing will hide this guide from students. Linked listings will still reference it.' Proceed?
+Edge Cases
+Empty title on save
+Title field shows error. Focus moves to title.
+Very long guide content
+Preview panel scrolls independently. No truncation.
+Linked listing since deleted
+Listed with strike-through + 'Listing removed' note. Unlink button still available.
+4.17 Admin â€” Staleness Queue
+/admin/stale
+Admin
+Layout
+Page Header
+'Staleness Queue' + count badge.
+Table
+Title | Org | Status | Last Verified (sorted ascending â€” oldest first) | 'Re-verify' + 'Open' actions.
+Interaction
+Re-verify button
+PUT /api/admin/listings/:id/verify. Row's Last Verified date updates immediately. isStale indicator clears. Row fades 
+slightly as it becomes 'clean'. If all rows cleared: empty state appears.
+Open button
+Navigate to /admin/listings/:id (curation panel).
+4.18 Admin â€” Audit Log Viewer
+/admin/audit
+Admin
+Layout
+Page Header
+'Audit Log' heading. Export button (CSV download of filtered results) â€” optional V1 feature.
+Filter Bar
+Category (multi-select) | Actor Type (multi-select) | Date Range (from/to date pickers) | Reference ID (text input â€” 
+paste any entity ID).
+Table
+Timestamp | Actor Type badge | Actor Name | Category badge | Action | Reference ID | Diff (expandable cell).
+Diff Cell Behavior
+Default
+Shows 'â€”' if no diff, or first field changed: 'status: upcoming â†’ open'.
+Expand
+Click 'Expand' icon button in cell. Opens an inline expanded row (not a modal) with full JSON diff. All changed fields 
+listed.
+Collapse
+Click collapse button. Row returns to summary.
+4.19 Admin â€” User Manager
+/admin/users
+Admin
+Layout
+Search bar
+At top: 'Search by name or email'. Debounced 300ms. Filters table in real-time.
+Table
+Name | Email | Role badge | Status badge | Created | Last Login | Actions.
+Actions
+Role select (dropdown in-row) + Suspend/Unsuspend toggle.
+Role Change Flow
+Trigger
+Admin clicks role badge or role select in row.
+Confirm dialog
+'Change [Name]'s role to [new role]? This affects their access immediately.' Cancel + Confirm.
+On confirm
+Role badge updates. AuditLog entry created. Toast: '[Name]'s role changed to [role].'
+Self-change guard
+Admin cannot change their own role (UI: their own row's role control is disabled with tooltip 'You cannot change your 
+own role.').
+Suspend Flow
+Trigger
+Active toggle set to off.
+Confirm dialog
+'Suspend [Name]? They will be immediately logged out and unable to access the platform.' Suspend + Cancel.
+On confirm
+Status badge: suspended. Toast: '[Name] suspended.'
+4.20 Organisation â€” Listings Interface
+/org/listings  +  /org/listings/new  +  /org/listings/:id
+Organisation
+Layout Structure
+Top Nav
+Organisation name (left) + 'My Listings' link + user name + Logout button.
+List screen
+'My Submissions' heading + 'Submit New Listing' primary button + table of own listings.
+Table columns
+Title | Status badge | Submitted At | Admin Review Status (under review / approved / rejected) | Edit button.
+Submit / Edit Form
+Form fields
+Title + Org Name (pre-filled, read-only) + Type select + Deadline date picker (optional) + External URL + Description 
+textarea.
+Submission
+POST /org/listings. Button loading state. On success: navigate to /org/listings. Toast: 'Submitted! An admin will 
+review your listing soon.'
+Under review state
+Edit button disabled. Tooltip: 'This listing is under admin review. Editing is locked.'
+Rejected state
+Shows rejection reason (admin-provided). Edit button re-enabled. 'Resubmit' CTA appears.
+Edge Cases
+Org account deactivated mid-session
+Next API call returns 403. Toast: 'Your organisation account is currently inactive. Contact the administrator.' Logout 
+forced.
+0 submissions
+Empty state: 'You haven't submitted any listings yet.' CTA: 'Submit your first listing.'
+5. Micro-Interactions & Motion System
+5.1 Timing System
+All durations derive from a base unit of 100ms. This ensures visual consistency across the system.
+Token
+Duration
+Use Case
+instant
+0ms
+No animation. Data updates that must not delay perception.
+fast
+80ms
+Button press response. Hover backgrounds. Checkbox fill.
+quick
+150ms
+Most transitions: page enters, modal scale, tooltip fade.
+standard
+200ms
+Card state changes. Toast enter. Filter transitions.
+comfortable
+300ms
+Modals opening. Card collapse. Drawer slides.
+deliberate
+400ms
+Button error shake. Complex multi-part transitions.
+slow
+600ms
+Guide tooltip delay. Pre-load minimum display time.
+extended
+800ms
+Count-up animation in metric cards.
+5.2 Easing Vocabulary
+Easing Name
+CSS Value
+When Used
+ease-out
+cubic-bezier(0,0,0.2,1)
+Elements entering the screen. Page transitions.
+ease-in
+cubic-bezier(0.4,0,1,1)
+Elements exiting. Fades out.
+ease-in-out
+cubic-bezier(0.4,0,0.2,1)
+In-place state changes. Tab indicators.
+spring
+cubic-bezier(0.34,1.56,0.64,1)
+Elastic/bouncy entries. Modal opens. Notification badge appear.
+linear
+linear
+Shimmer animation. Progress fills.
+5.3 Global Animation Rules
+NO motion should begin before user intent is clear. Hover animations only trigger after the cursor has rested for 
+â‰¥80ms (prevent noise on fast mouse moves).
+Skeleton screens appear immediately on load (0ms). Content transitions into skeleton with fade (150ms) only when 
+content is ready â€” never before.
+Reduce-motion: all animations except loading spinners and skeleton shimmers should be disabled when the 
+prefers-reduced-motion media query is active. Critical state changes (errors, successes) should still use non-motion 
+feedback (color, icon, text).
+Never chain >2 sequential animations visible to the user. Multiple parallel animations on separate elements are 
+acceptable.
+All lists that reorder should do so with FLIP animation (First, Last, Invert, Play). Elements slide to new positions 
+rather than disappearing and reappearing.
+5.4 Feedback Patterns
+Feedback Type
+Mechanism
+When
+Optimistic update
+Immediate UI state change before API confirmation
+All student activity mutations (save, apply, ignore)
+Rollback
+Revert to pre-action state + error toast
+API failure after optimistic update
+Loading skeleton
+Replace content with shimmer skeleton
+Initial page data loads
+Inline spinner
+Small 16px spinner in component
+Secondary async operations (email availability, tag save)
+Button loading
+Spinner replaces label, width locked
+Any button-triggered async operation
+Toast notification
+Global toast region
+Async success/failure, system events
+Inline error
+Error text below field, red border
+Form validation failure
+Shake animation
+Horizontal keyframe shake
+Form submit with errors, failed button actions
+Count-up animation
+Numbers animate from 0 to value
+Dashboard metric cards on first load
+Progress ring
+Circular progress around icon
+File uploads (not in V1 but reserved for V2)
+Pulse animation
+Scale pulse 1.0â†’1.04â†’1.0
+dont-miss badge (2 cycles on appear)
+5.5 Transition Catalogue
+Page-Level Transitions
+Standard push
+Outgoing fades to 0% opacity. Incoming fades in from 0% to 100%. Both at 150ms. Occurs simultaneously.
+Replace (no history)
+Same as push but browser history not updated.
+Back navigation
+Incoming slides in from left (+20px start position). Outgoing slides right. Both fade. 200ms.
+Component-Level Transitions
+Card appear (list load)
+Cards stagger in with 40ms delay per card. Each card: fade in from 0% opacity + translate from y+8px. 200ms each.
+Card collapse (ignore)
+Card height animates to 0. Opacity fades to 0. 300ms. Adjacent cards FLIP to fill gap.
+Accordion expand
+Max-height transitions from 0 to content height. Opacity from 0 to 1. 250ms ease-out.
+Accordion collapse
+Max-height to 0. Opacity to 0. 200ms ease-in.
+Modal enter
+Backdrop fades to 0.5 opacity (200ms). Panel scale from 0.95+fade (200ms, spring). Both start simultaneously.
+Modal exit
+Both reverse. 150ms.
+Bottom sheet enter
+Backdrop fades in (200ms). Sheet slides from y+100% to y+0% (300ms, ease-out).
+Toast enter
+Slide from right (+100%) + fade. 300ms spring.
+Toast exit
+Slide right + fade. 200ms ease-in.
+Toast stack reflow
+When new toast pushes others up: 200ms ease-in-out translate.
+Dropdown open
+Panel slides down from top + fades in. 150ms ease-out. Chevron rotates 180Â°.
+Dropdown close
+Panel fades out + slides up slightly. 120ms ease-in.
+Tag chip select
+Fill color transitions in. 150ms ease-in-out.
+Tag chip deselect
+Fill transitions out. 150ms.
+Status badge change (activity row)
+Old badge fades out, new badge fades in. 200ms cross-fade.
+Number count-up
+requestAnimationFrame loop from 0 to target. 800ms. Easing: ease-out.
+Notification badge bounce
+Scale: 0 â†’ 1.2 â†’ 1. Spring. 300ms. Only on 0â†’N transition.
+Step progress fill
+Connector line fills left to right (width: 0% â†’ 100%). 300ms linear. Node fills concurrently.
+6. State & Conditional Rendering Logic
+6.1 Global Authentication State
+UNAUTHENTICATED
+JWT absent or invalid. Renders only public pages (/, /login, /signup). Any /app, /admin, /org route redirects.
+AUTHENTICATED_UNVERIFIED
+JWT valid but isEmailVerified:false. Only /login and signup-verification-pending visible.
+AUTHENTICATED_ONBOARDING
+Verified but onboardingComplete:false. Only /onboarding accessible.
+AUTHENTICATED_STUDENT
+Fully onboarded student. Full /app/* access.
+AUTHENTICATED_ADMIN
+role:admin. Full /admin/* access. No /app/* access (redirected).
+AUTHENTICATED_ORG
+role:source. Full /org/* access.
+SUSPENDED
+status:suspended. Only /suspended page. Logout available.
+6.2 Listing Card Visibility Rules
+Show in Feed
+status = open OR upcoming. Not ignored by this user. Eligible (or eligibility not checked in Browse All).
+Show in Closing Soon
+status = open. Deadline within 7 days. Not ignored.
+Show in Recommended
+status = open. Eligible (year + branch match or empty). Not saved/applied/ignored.
+Show in Don't Miss
+priority = dont-miss. status = open.
+Show in Calendar
+status = open OR upcoming. Has any timeline date field set.
+Show in Dashboard
+Any status. Has UserActivity record. Even missed and closed.
+Show in Detail (closed/cancelled)
+If user has a UserActivity record for this listing. Otherwise redirect away.
+Hide completely from student
+status = unknown (admin only). Or the listing has no active state.
+6.3 Action Bar Conditional Rendering
+The Action Bar on the Listing Detail screen renders differently depending on the current UserActivity.status for the 
+authenticated user and the listing's status.
+Condition
+Action Bar Content
+Notes
+No UserActivity + listing open/upcoming
+Save (primary) + Ignore (ghost)
+Default state
+UserActivity status: saved
+'Saved' button (filled, accent) + Mark Applied (secondary) + Ignore (ghost)
+Mark Applied triggers transition
+UserActivity status: applied
+'Applied' badge display + Notes textarea visible below action bar
+Read-only applied state
+UserActivity status: ignored
+'Removed' text + 'Undo ignore' ghost button for 5s, then just neutral state
+Brief undo window
+UserActivity status: missed
+Banner: 'Deadline passed on [date]' + disabled state for all buttons
+No interaction possible
+Listing status: closed (no activity)
+Not accessible â€” redirected away (see Â§6.2)
+Guard prevents render
+Listing status: cancelled (with activity)
+Banner: 'This opportunity was cancelled.' All action buttons hidden.
+Informational only
+6.4 Notification Badge Conditional Rendering
+Badge hidden
+unread count = 0
+Badge shows number
+unread count between 1 and 99. Shows exact number.
+Badge shows '99+'
+unread count > 99. Prevents overflow.
+Badge pulses
+On transition from 0 â†’ N (new notification received while user is on the app). Bounce animation.
+6.5 Admin Curation Panel Conditional Rendering
+Cycle Reset button
+Visible ONLY when: status=closed AND scheduleType is recurring-annual or recurring-irregular.
+Auto-tag suggestion banner
+Visible when: description.length > 100 AND auto-tagger found tags not already in domainTags array.
+Cancellation warning
+Appears inline in Status select when: new value = 'cancelled'. Not a modal â€” an inline amber banner within the 
+section.
+Don't-miss notification note
+Appears inline in Priority select when: new value = 'dont-miss'. Blue info banner: 'Saving will immediately notify 
+users with matching interests.'
+Last verified date
+Shows 'Last verified: [date]' when lastVerifiedAt is set. Shows 'Never verified' in amber when null.
+Confidence level (derived)
+Updates live as the admin edits the deadline / lastDeadline fields. Shows computing spinner for 100ms after field 
+change.
+6.6 Form Dirty State Logic
+Dirty detection
+Compares current form values against the last-saved snapshot. Deep equality check on each field.
+Dirty indicator
+'â€¢ Unsaved changes' text appears in page header and curation panel sticky footer.
+Navigation away while dirty
+React Router's beforeunload-equivalent: a Confirm Dialog appears: 'You have unsaved changes. Discard them and leave?' 
+with Discard + Stay buttons.
+Tab close while dirty
+Browser's native beforeunload dialog fires. Cannot be customised.
+Discard
+Reverts form to last-saved snapshot. Dirty indicator clears.
+Save clears dirty
+After successful save, snapshot is updated. Dirty indicator disappears.
+6.7 Organisation Row State Rules
+Active org
+Normal row appearance. All action buttons enabled.
+Inactive org
+Row greyed out (0.6 opacity). isActive toggle shows OFF. 'Verify' button hidden. 'Reactivate' button shown.
+Unverified org
+Verification level badge shows 'unverified'. 'Verify' button prominent.
+Official org
+Special badge. 'Submissions direct publish' note shown in row.
+7. User Flows (Step-by-Step)
+7.1 First-Time Student Registration & Onboarding
+#
+Trigger
+UI Response
+State Update
+Feedback
+Next
+1
+User opens /signup
+Signup form renders. Name field auto-focused.
+UNAUTHENTICATED
+â€”
+Type in name
+2
+User types name, email, password
+Fields update. Strength meter animates. Email availability check fires on blur.
+Form filling
+â€”
+All valid â†’ click Submit
+3
+Click Submit
+All fields validate. Button enters loading state.
+Loading
+â€”
+API response
+4
+API success (201)
+Form transitions to success state (fade fields, show checkmark). 'Check your email' message.
+Post-submit success
+Toast: 'Account created!'
+User checks email
+5
+User clicks email verification link
+GET /api/auth/verify. Token validated. isEmailVerified set.
+AUTHENTICATED_UNVERIFIED â†’ UNVERIFIED cleared
+â€”
+Redirect to /onboarding
+6
+Onboarding: Step 1
+Branch select + year selector render. Step 1 progress node pulses.
+AUTHENTICATED_ONBOARDING
+â€”
+Fill and click Continue
+7
+Continue from step 1
+Validates both fields. Slides to step 2.
+Step 1 complete
+â€”
+Step 2 tag picker
+8
+Onboarding: Step 2
+Tag picker renders. Tags load from API. Up to 5 selections.
+Step selecting
+â€”
+Select tags + Continue
+9
+Continue from step 2
+Slides to step 3 with selections saved.
+Step 2 complete
+â€”
+Step 3 preferences
+10
+Onboarding: Step 3
+Toggles render. All default to on.
+Preference setting
+â€”
+Click 'Start exploring'
+11
+Complete clicked
+PUT /api/user/onboarding. Button loading.
+Saving
+â€”
+API response
+12
+API success
+onboardingComplete set. Navigate to /app/feed.
+AUTHENTICATED_STUDENT
+Toast: 'Welcome!'
+Feed loads
+7.2 Student Saves and Applies to a Listing
+#
+Trigger
+UI Response
+State Update
+Feedback
+Next
+1
+Student scrolls feed
+Recommended section loads. 'Google STEP 2026' card visible.
+Feed loaded
+â€”
+Tap Save on card
+2
+Tap Save icon
+Bookmark fills immediately (optimistic). POST /api/activity fires.
+Optimistic: saved
+â€”
+API response
+3
+API 201 success
+Optimistic state confirmed. Tracking strip 'Saved' count increments.
+Confirmed: saved
+Toast: 'Saved!'
+â€”
+4
+Student taps card
+Navigate to /app/listing/[id]. Page loads.
+Listing detail
+â€”
+Read listing
+5
+Student taps 'Mark Applied'
+Action bar transitions. Notes textarea fades in. PUT /api/activity loading.
+Optimistic: applied
+â€”
+API response
+6
+API 200 success
+Applied state confirmed.
+Confirmed: applied
+â€”
+Optional: add notes
+7
+Student types notes
+Notes autosave 500ms after typing stops. 'Savingâ€¦' â†’ 'Saved âœ“' micro-indicator.
+Notes saving
+â€”
+Navigate away
+7.3 Student Misses a Listing (System Flow)
+#
+Trigger
+UI Response
+State Update
+Feedback
+Next
+1
+Student has saved listing
+deadline is tomorrow.
+UserActivity: saved
+â€”
+â€”
+2
+Notification cron fires at 08:00
+Finds UserActivity where status=saved, deadline=today+1. Creates Notification.
+Notification created
+â€”
+Student visits app
+3
+Student opens app
+Notification badge shows (was 0, now 1). Bounces.
+Badge: 1
+â€”
+Student ignores notification
+4
+Deadline passes
+Status transition cron runs. Finds listing deadline â‰¤ now. Sets listing status: closed.
+Listing: closed
+â€”
+â€”
+5
+Cron finds UserActivity
+status=saved for this listing. Sets status=missed, statusUpdatedAt=listing.deadline.
+UserActivity: missed
+â€”
+â€”
+6
+Student opens dashboard
+Missed metric card shows count. Activity row appears in Missed section with muted styling.
+Dashboard: missed row
+â€”
+No action available
+7.4 Admin Publishes a New Listing
+#
+Trigger
+UI Response
+State Update
+Feedback
+Next
+1
+Admin at /admin/listings
+Listing table loaded. 'New Listing' button visible.
+Listings table
+â€”
+Click 'New Listing'
+2
+Click 'New Listing'
+Navigate to /admin/listings/new. Empty curation panel renders. Timeline section auto-expanded.
+Empty curation panel
+â€”
+Fill fields
+3
+Admin fills all sections
+Title, description, type, timeline fields, audience, tags, status=open, priority=high, isCurated=true.
+Form dirty
+'â€¢ Unsaved' indicator
+Click Save
+4
+Click Save
+All validations pass. Button loading state. POST /api/admin/listings.
+Saving
+â€”
+API response
+5
+API 201 success
+Navigate to /admin/listings/[new id]. Version: 1. Toast: 'Listing created.'
+Curation panel: saved
+Toast: 'Created'
+â€”
+6
+Listing is live
+status:open. Students with matching profile will see in Recommended after next pre-compute cycle.
+Listing live
+â€”
+â€”
+7.5 Admin Runs Cycle Reset
+#
+Trigger
+UI Response
+State Update
+Feedback
+Next
+1
+Listing is closed (past deadline)
+Admin opens /admin/listings/:id. Cycle Reset button visible in Timeline section.
+Curation panel: closed listing
+â€”
+Click Cycle Reset
+2
+Confirm Dialog
+'Reset this listing for next cycle? Previous deadline archived. Dates cleared. Status â†’ Upcoming. isCurated 
+removed.' Two buttons: Cancel + Reset.
+Dialog open
+â€”
+Click Reset
+3
+POST cycle-reset
+Button loading. API call fires.
+Resetting
+â€”
+API response
+4
+API success
+Form reloads with: openDate=null, deadline=null, status=upcoming, isCurated=false. lastDeadline preserved. Version 
+incremented.
+Form updated
+Toast: 'Cycle reset'
+Admin fills new dates
+7.6 Organisation Submits a Listing (Full Review Cycle)
+#
+Trigger
+UI Response
+State Update
+Feedback
+Next
+1
+Org user at /org/listings
+Empty or existing submissions visible.
+Org listings
+â€”
+Click 'Submit New Listing'
+2
+Form renders
+Title, type, deadline, URL, description inputs.
+New listing form
+â€”
+Fill and submit
+3
+Submit
+POST /org/listings. Button loading.
+Submitting
+â€”
+API response
+4
+API 201 success
+Navigate to /org/listings. New row shows status: 'Under Review'.
+Submission pending
+Toast: 'Submitted!'
+â€”
+5
+Admin sees queue badge +1
+Admin opens /admin/queue. New row at top.
+Admin queue
+â€”
+Admin reviews
+6
+Admin clicks Approve
+Navigates to /admin/listings/:id pre-filled. Banner: 'Review and publish.'
+Curation panel
+â€”
+Admin fills missing fields
+7
+Admin saves with status:open
+PUT API. Listing published.
+Listing live
+â€”
+â€”
+8
+Org user refreshes /org/listings
+Row status updates to 'Approved'. Edit locked.
+Org sees approved
+â€”
+â€”
+7.7 Error Recovery â€” Optimistic Rollback
+#
+Trigger
+UI Response
+State Update
+Feedback
+Next
+1
+Student taps Save on card
+Bookmark fills (optimistic).
+Card: saved
+â€”
+API fires
+2
+Network error
+POST /api/activity times out after 10s or returns 5xx.
+Error detected
+â€”
+Rollback
+3
+Rollback
+Bookmark icon reverts to outline (150ms fade).
+Card: unsaved
+Toast: 'Failed to save. Try again.'
+â€”
+4
+Student taps Save again
+Process repeats.
+â€”
+â€”
+â€”
+7.8 Admin Resolves a Data Flag
+#
+Trigger
+UI Response
+State Update
+Feedback
+Next
+1
+Admin opens /admin/listings/:id
+Right panel shows pending flag count: 1.
+Curation panel
+â€”
+Expand flags panel
+2
+Flag details visible
+issueType: wrong_deadline. proposedFix: 'Deadline is April 15, not March 15.'
+Flag panel open
+â€”
+Admin verifies externally
+3
+Admin corrects deadline in form
+Timeline section: deadline updated.
+Form dirty
+â€”
+Click Resolve on flag
+4
+Click 'Resolve' on flag
+Flag row fades out. Flag count decrements.
+Flag resolved
+â€”
+Click Save
+5
+Save listing
+New deadline persisted. AuditLog updated.
+Listing saved
+Toast: 'Saved'
+â€”
+8. Edge Cases & Failure Scenarios
+8.1 Empty Data Scenarios
+New platform (no listings)
+Every feed section shows empty states. Calendar shows empty state. No listings in any admin tables. Admin is prompted 
+with a 'Get started' guide banner.
+New user (just onboarded)
+Feed shows unfiltered Browse All. Recommended shows 'Set interests' nudge. Closing Soon may have results. Dashboard is 
+empty.
+Student with all ignored
+Recommended section shows 'You've dismissed all recommendations.' Closing Soon excludes ignored. Browse All still 
+shows all.
+Admin with no sources registered
+Source manager empty state. Submission queue empty. No organisations to manage.
+8.2 Partial Data Scenarios
+Listing with no deadline
+Timeline card shows 'No deadline set'. Closing Soon never includes this listing. Calendar shows it only if 
+expectedStart/End set.
+Listing with no domainTags
+No tag row on card (row hidden). Recommendation scoring: 0 tag-match points. Still eligible if year/branch matches.
+Listing with null orgLogoUrl
+Initials avatar renders. Never shows broken image icon.
+User with 0 interests
+Recommended section shows a nudge banner. Feed still shows unfiltered Browse All.
+Notification with deleted listing
+Notification still displays (payload snapshot). Navigation to actionUrl shows listing-not-found screen.
+Guide with 0 linked listings
+'Related Opportunities' section simply not rendered.
+8.3 Network Delay Scenarios
+Feed load takes > 3s
+Skeleton cards remain. After 8s: 'Taking longer than expectedâ€¦' text appears below skeleton. After 15s: Error state 
+with Retry.
+Save action takes > 2s
+Optimistic update stays. Button remains in loading state. After 10s timeout: rollback + error toast.
+Admin save takes > 2s
+Save button stays loading. No timeout â€” admin operations may involve complex server-side logic. Spinner continues 
+until resolved.
+Slow image loads (orgLogoUrl)
+Image element shows a loading shimmer behind it while the src fetches. On error: instant fallback to initials avatar.
+Render service cold start
+Full-page loading state with a friendly message: 'Waking up the server, this takes about 30 secondsâ€¦' shown after 3s 
+of loading.
+8.4 Concurrent Edit Conflicts
+Two admins editing same listing
+Second admin to save gets HTTP 409. Toast: 'This listing was modified by someone else. Your changes were not saved. 
+Reload to see the latest version.' Reload button in toast. Form data preserved so admin doesn't lose their work.
+Admin saves, cron changes status simultaneously
+Cron runs during admin save. Version is checked before cron writes (cron uses upsert without version check â€” only 
+admin saves are version-gated). Admin save may succeed on top of cron's change, or fail on version conflict. If fail: 
+same 409 flow as above.
+8.5 Long Text & Overflow Scenarios
+Very long listing title (>80 chars)
+Card: 2-line clamp + ellipsis. Full title in tooltip on hover. Curation panel: full display (no clamp in form input). 
+Listing detail: full display.
+Very long organisation name (>50 chars)
+Card org name: 1-line clamp + ellipsis. Full in tooltip.
+Very long description (>5000 words)
+Listing detail: full render with no truncation. A 'Jump to top' floating button appears after user scrolls >400px.
+Many DomainTags on a card (>3)
+First 3 shown, '+N' overflow chip. Clicking '+N' expands to show all inline.
+Many linked listings in guide (>5)
+Related Opportunities section shows first 5 + 'Show all N' expandable.
+Very long note in UserActivity
+Notes textarea: scrollable internally. No display length limit. Displayed in activity row as 1-line clamp.
+Long org name in source manager table
+1-line clamp. Tooltip on hover.
+Audit log diff with many fields
+Diff cell shows 'N fields changed'. Expanded row shows all.
+8.6 Missing Asset Scenarios
+orgLogoUrl 404
+Image error event fires immediately. Renders initials avatar in same space. No layout shift.
+Guide content empty string
+'This guide has no content yet.' placeholder shown.
+External URL absent
+External link button disabled. Tooltip: 'No external link available for this listing.'
+User profile picture (future V2)
+Not in V1. Initials avatar used throughout.
+8.7 Browser / Session Edge Cases
+JWT expired mid-session
+Next authenticated API call returns 401. Global interceptor catches this. Clears localStorage JWT. Toast: 'Session 
+expired. Please log in again.' Navigate to /login after 2s.
+Multiple tabs open
+If user logs out in one tab, other tabs will fail their next API call with 401 and trigger the expired-session flow.
+Browser back after completing onboarding
+/onboarding guard: onboardingComplete:true â†’ redirects to /app/feed immediately.
+Form submitted with autofill values
+Autofill-populated fields fire onChange events correctly. No special handling needed.
+Slow typing in search (admin)
+Debounce ensures search API call only fires 300ms after last keystroke. Intermediate states show current table rows 
+without flickering.
+Page refresh on admin curation panel
+If form was dirty, data is LOST (no localStorage persistence on admin forms â€” too complex). User sees fresh saved 
+state.
+Print view
+No special print styles in V1. Browser default print behavior.
+8.8 Accessibility Edge Cases
+Screen reader on listing card
+Card container is a single tabbable element with aria-label combining title + org + type + deadline. Save and Ignore 
+buttons are separately tabbable with descriptive aria-labels.
+Screen reader on status badges
+All badges have aria-label with full text. e.g., aria-label='Status: Open'.
+Keyboard-only navigation of tag picker
+Each chip is tabbable. Space/Enter toggles selection. 'Max reached' message announced to screen reader via aria-live.
+High contrast mode
+All borders visible. Focus rings maintain â‰¥ 3:1 contrast ratio. No information conveyed by color alone.
+Focus after modal close
+Focus returns to the element that triggered the modal (stored as a ref before modal opens).
+Dynamic content (toasts)
+Toast region has aria-live='polite'. Error toasts use aria-live='assertive'. Screen readers announce all toasts.
+
+

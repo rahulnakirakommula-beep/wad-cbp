@@ -1,8 +1,8 @@
-
+﻿
 OPPORTUNITY INTELLIGENCE PLATFORM
   Software Requirements Specification  
 IEEE Std 830 Compliant  |  Version 1.0
-Campus Opportunity Aggregator (COA)  —  V1 Release
+Campus Opportunity Aggregator (COA)  â€”  V1 Release
 Document Attribute
 Value
 Document ID
@@ -12,40 +12,44 @@ Final Draft
 Version
 1.0
 Classification
-Confidential — Internal
+Confidential â€” Internal
 Stack
-MERN (MongoDB · Express · React · Node)
+MERN (MongoDB Â· Express Â· React Â· Node)
 Table of Contents
 1. Introduction
 1.1 Purpose
-This Software Requirements Specification (SRS) defines the complete functional and non-functional requirements for the Opportunity Intelligence Platform — a curated, timeline-driven opportunity discovery and tracking system for undergraduate students. The document is intended for use by the development team, project stakeholders, and evaluators at VJStartups.
-
+This Software Requirements Specification (SRS) defines the complete functional and non-functional requirements for the 
+Opportunity Intelligence Platform â€” a curated, timeline-driven opportunity discovery and tracking system for 
+undergraduate students. The document is intended for use by the development team, project stakeholders, and evaluators 
+at VJStartups.
 1.2 Scope
-The system, internally codenamed Campus Opportunity Aggregator (COA), addresses a critical gap in how undergraduate students discover time-sensitive opportunities such as internships, research positions, fellowships, competitions, hackathons, scholarships, mentorships, workshops, and incubators.
-
-The platform is explicitly not a job board. Its core differentiator is timeline visibility — surfacing what is coming, when to prepare, and what is at risk of being missed — replacing accidental senior-knowledge-transfer with a structured, always-current intelligence system.
-
+The system, internally codenamed Campus Opportunity Aggregator (COA), addresses a critical gap in how undergraduate 
+students discover time-sensitive opportunities such as internships, research positions, fellowships, competitions, 
+hackathons, scholarships, mentorships, workshops, and incubators.
+The platform is explicitly not a job board. Its core differentiator is timeline visibility â€” surfacing what is 
+coming, when to prepare, and what is at risk of being missed â€” replacing accidental senior-knowledge-transfer with a 
+structured, always-current intelligence system.
 Scope boundaries for V1:
 Single institution deployment (one college, one branch enum set).
 Three user types: Student, Admin, Organisation (Source).
 MERN stack: MongoDB, Express.js, React (React Router v6), Node.js.
-No scraper integrations (architecture is expandable — targeted at V2).
+No scraper integrations (architecture is expandable â€” targeted at V2).
 No OAuth in V1 (email/password authentication only).
-No public submission form — Organisations access a dedicated webpage and Listing Manager.
-
+No public submission form â€” Organisations access a dedicated webpage and Listing Manager.
 1.3 Definitions and Acronyms
 Term
 Definition
 COA
-Campus Opportunity Aggregator — the system being specified.
+Campus Opportunity Aggregator â€” the system being specified.
 SRS
-Software Requirements Specification — this document.
+Software Requirements Specification â€” this document.
 HLD
-High-Level Design — companion architecture document.
+High-Level Design â€” companion architecture document.
 Listing
 A single opportunity record (internship, competition, etc.) in the system.
 Organisation
-An external entity (club, department, company) that submits listings. Called 'Source' in schema; displayed as 'Organisation' in UI.
+An external entity (club, department, company) that submits listings. Called 'Source' in schema; displayed as 
+'Organisation' in UI.
 DomainTag
 A categorised slug (e.g., 'frontend', 'machine-learning') used to classify listings and match student interests.
 UserActivity
@@ -59,34 +63,36 @@ Functional Requirement.
 NFR
 Non-Functional Requirement.
 JWT
-JSON Web Token — used for session authentication.
+JSON Web Token â€” used for session authentication.
 DXA
-Document XML Attribute — unit used in DOCX layout (1440 DXA = 1 inch).
+Document XML Attribute â€” unit used in DOCX layout (1440 DXA = 1 inch).
 TTL
-Time-To-Live — MongoDB index that auto-expires documents after a set duration.
+Time-To-Live â€” MongoDB index that auto-expires documents after a set duration.
 prepLeadWeeks
 Admin-set number of weeks before a deadline to trigger a preparation reminder notification.
 confidenceLevel
 Derived field on a Listing timeline. Computed at read time from deadline date vs lastDeadline age.
-
 1.4 Document Overview
-Section 1 — Introduction. Section 2 — Overall System Description. Section 3 — Functional Requirements (grouped by module). Section 4 — Non-Functional Requirements. Section 5 — External Interface Requirements. Section 6 — System Constraints and Design Decisions.
+Section 1 â€” Introduction. Section 2 â€” Overall System Description. Section 3 â€” Functional Requirements (grouped 
+by module). Section 4 â€” Non-Functional Requirements. Section 5 â€” External Interface Requirements. Section 6 â€” 
+System Constraints and Design Decisions.
 2. Overall Description
 2.1 Product Perspective
-The Opportunity Intelligence Platform is a standalone, web-based SaaS application deployed on free-tier cloud infrastructure (Vercel for frontend, Render for backend, MongoDB Atlas for database). It has no integration with existing college ERP or placement portals in V1. The system is self-contained and communicates with external services only via email (Nodemailer/SMTP).
-
+The Opportunity Intelligence Platform is a standalone, web-based SaaS application deployed on free-tier cloud 
+infrastructure (Vercel for frontend, Render for backend, MongoDB Atlas for database). It has no integration with 
+existing college ERP or placement portals in V1. The system is self-contained and communicates with external services 
+only via email (Nodemailer/SMTP).
 The system consists of three logical tiers:
-Presentation tier — React SPA served via Vercel CDN.
-Application tier — Node.js/Express REST API deployed on Render.
-Data tier — MongoDB Atlas (M0 free cluster) with Redis for feed caching (pre-computed Recommended section).
-
+Presentation tier â€” React SPA served via Vercel CDN.
+Application tier â€” Node.js/Express REST API deployed on Render.
+Data tier â€” MongoDB Atlas (M0 free cluster) with Redis for feed caching (pre-computed Recommended section).
 2.2 User Classes and Characteristics
 Actor
 Who They Are
 Primary Tasks
 Access Level
 Student
-Enrolled undergraduate; study year 1–6; single institution.
+Enrolled undergraduate; study year 1â€“6; single institution.
 Browse feed, save/track listings, view calendar, manage notifications.
 /app/* routes. JWT-gated. Requires isEmailVerified + onboardingComplete.
 Admin
@@ -101,24 +107,22 @@ System
 Internal cron jobs and event-driven services.
 Auto-transition listing states, fire notifications, flag stale records, mark missed activities.
 Internal only. No external API exposure.
-
 2.3 Operating Environment
-Client: Modern web browsers (Chrome 100+, Firefox 100+, Safari 15+). Responsive design targeting desktop and mobile viewports.
+Client: Modern web browsers (Chrome 100+, Firefox 100+, Safari 15+). Responsive design targeting desktop and mobile 
+viewports.
 Server: Node.js 18+ LTS. Hosted on Render (free tier, spin-up latency acceptable for V1).
 Database: MongoDB Atlas M0 (512 MB). Connection via Mongoose ODM.
 Cache: Redis (Upstash free tier) for pre-computed Recommended feed sections.
 Email: Nodemailer with SMTP relay (Gmail App Password or SendGrid free tier).
 CDN / Hosting: Vercel for React SPA (automatic CI/CD from main branch).
-
 2.4 Assumptions and Dependencies
 All students belong to a single institution. Branch names are enumerated (not free text).
-Study year is self-reported by the student at onboarding (1–6). No batch-year arithmetic.
+Study year is self-reported by the student at onboarding (1â€“6). No batch-year arithmetic.
 Organisations are pre-registered by Admin. No self-registration in V1.
-Email delivery is non-transactional — occasional delays acceptable (daily digest model).
-Admin is trusted — all listing edits are accepted without re-verification workflow.
+Email delivery is non-transactional â€” occasional delays acceptable (daily digest model).
+Admin is trusted â€” all listing edits are accepted without re-verification workflow.
 Scrapers are not integrated in V1. The schema supports them but no scraper code is written.
 roadmap.sh DomainTag links are display-only; no live API calls to roadmap.sh in V1.
-
 2.5 Design Decisions (Resolved)
 The following design decisions were made prior to specification and are treated as constraints:
 Question
@@ -153,128 +157,157 @@ Admin must manually set to real status. Does not auto-graduate.
 Unknown = not yet reviewed by admin.
 Scrapers
 Not built in V1. sourceType enum and hooks exist.
-V2 additive — no breaking changes needed.
+V2 additive â€” no breaking changes needed.
 Public submission form
 No public form in V1.
 Organisations get a dedicated authenticated webpage + Listing Manager.
 Branch field
-Single institution → branch is an enum, not free text.
+Single institution â†’ branch is an enum, not free text.
 Consistent eligibility filtering.
 3. Functional Requirements
-Requirements are grouped by module. Each requirement is identified by a code in the format FR-[MODULE]-[NN]. Priority is designated P1 (must-have), P2 (should-have), or P3 (nice-to-have).
+Requirements are grouped by module. Each requirement is identified by a code in the format FR-[MODULE]-[NN]. Priority 
+is designated P1 (must-have), P2 (should-have), or P3 (nice-to-have).
 3.1 Authentication & Onboarding (FR-AUTH)
 FR-ID
 Req. Name
 Description
 FR-AUTH-01
 Student Signup
-The system shall accept name, email, and password (minimum 8 characters). Backend shall hash the password with bcrypt (cost factor 12) and create a User record with isEmailVerified: false and onboardingComplete: false.
+The system shall accept name, email, and password (minimum 8 characters). Backend shall hash the password with bcrypt 
+(cost factor 12) and create a User record with isEmailVerified: false and onboardingComplete: false.
 FR-AUTH-02
 Email Verification
-On signup, the system shall send an email containing a time-limited JWT verification link (24-hour expiry). GET /api/auth/verify?token=... shall set isEmailVerified: true and redirect to /onboarding.
+On signup, the system shall send an email containing a time-limited JWT verification link (24-hour expiry). GET 
+/api/auth/verify?token=... shall set isEmailVerified: true and redirect to /onboarding.
 FR-AUTH-03
 Duplicate Email Block
 The system shall return HTTP 409 if the email already exists in the database.
 FR-AUTH-04
 Login
-POST /api/auth/login shall validate credentials via bcrypt.compare. A successful login returns a JWT (7-day expiry) and updates lastLoginAt. An unverified email returns HTTP 403 with a clear message.
+POST /api/auth/login shall validate credentials via bcrypt.compare. A successful login returns a JWT (7-day expiry) 
+and updates lastLoginAt. An unverified email returns HTTP 403 with a clear message.
 FR-AUTH-05
 Token Storage
-The frontend shall store the JWT in localStorage and include it in the Authorization header for all authenticated API calls.
+The frontend shall store the JWT in localStorage and include it in the Authorization header for all authenticated API 
+calls.
 FR-AUTH-06
-Onboarding — Step 1
-The system shall present a multi-step onboarding flow. Step 1 collects the student's academic branch (enum from the institution's branch list) and current study year (selector, values 1–6).
+Onboarding â€” Step 1
+The system shall present a multi-step onboarding flow. Step 1 collects the student's academic branch (enum from the 
+institution's branch list) and current study year (selector, values 1â€“6).
 FR-AUTH-07
-Onboarding — Step 2
-Step 2 shall display all active DomainTags grouped by category. The student shall select up to 5 tags. Tags are loaded from GET /api/tags?active=true.
+Onboarding â€” Step 2
+Step 2 shall display all active DomainTags grouped by category. The student shall select up to 5 tags. Tags are loaded 
+from GET /api/tags?active=true.
 FR-AUTH-08
-Onboarding — Step 3
-Step 3 shall display notification preference toggles (all enabled by default). The student may adjust before completing.
+Onboarding â€” Step 3
+Step 3 shall display notification preference toggles (all enabled by default). The student may adjust before 
+completing.
 FR-AUTH-09
 Onboarding Completion
-PUT /api/user/onboarding shall save all onboarding fields and set onboardingComplete: true. The student is redirected to /app/feed.
+PUT /api/user/onboarding shall save all onboarding fields and set onboardingComplete: true. The student is redirected 
+to /app/feed.
 FR-AUTH-10
 Onboarding Guard
-All /app/* routes shall redirect to /onboarding if onboardingComplete: false. All /app/* and /admin/* routes shall redirect to /login if the JWT is absent or invalid.
+All /app/* routes shall redirect to /onboarding if onboardingComplete: false. All /app/* and /admin/* routes shall 
+redirect to /login if the JWT is absent or invalid.
 FR-AUTH-11
 Suspended User Block
 Users with status: suspended shall be blocked from accessing /app/* routes, receiving HTTP 403.
 FR-AUTH-12
 Admin Role Redirect
 On login, if role === 'admin', the frontend shall redirect to /admin. If role === 'source', redirect to /org.
-
 3.2 Feed & Discovery (FR-FEED)
 FR-ID
 Req. Name
 Description
 FR-FEED-01
 Four Feed Sections
-GET /api/feed/sections shall return all four sections in a single API call: Closing Soon, Recommended for You, Don't Miss, and Browse All. Sections are computed via four parallel DB queries.
+GET /api/feed/sections shall return all four sections in a single API call: Closing Soon, Recommended for You, Don't 
+Miss, and Browse All. Sections are computed via four parallel DB queries.
 FR-FEED-02
 Closing Soon
-Closing Soon shall return up to 5 open listings whose deadline falls within 7 days from the current date, excluding listings the user has ignored, sorted by deadline ascending.
+Closing Soon shall return up to 5 open listings whose deadline falls within 7 days from the current date, excluding 
+listings the user has ignored, sorted by deadline ascending.
 FR-FEED-03
 Don't Miss
 Don't Miss shall return up to 3 listings with priority: dont-miss and status: open, sorted by deadline ascending.
 FR-FEED-04
-Recommended — Eligibility Filter
-The recommendation engine shall first filter listings to those where the student's currentYear is in targetAudience.years (or the array is empty — meaning all years eligible) AND the student's branch is in targetAudience.branches (or empty array). Listings already saved, applied, or ignored shall be excluded.
+Recommended â€” Eligibility Filter
+The recommendation engine shall first filter listings to those where the student's currentYear is in 
+targetAudience.years (or the array is empty â€” meaning all years eligible) AND the student's branch is in 
+targetAudience.branches (or empty array). Listings already saved, applied, or ignored shall be excluded.
 FR-FEED-05
-Recommended — Scoring
-Each eligible candidate shall receive a score: +2 per matching domainTag with user interests, +1 if deadline is within 30 days, +2 if priority is high, +3 if priority is dont-miss. Results sorted by score descending; top 8 returned. If fewer than 3 results, the year filter is relaxed and the query reruns.
+Recommended â€” Scoring
+Each eligible candidate shall receive a score: +2 per matching domainTag with user interests, +1 if deadline is within 
+30 days, +2 if priority is high, +3 if priority is dont-miss. Results sorted by score descending; top 8 returned. If 
+fewer than 3 results, the year filter is relaxed and the query reruns.
 FR-FEED-06
-Recommended — Pre-computation
-The Recommended section shall be pre-computed by a background job running every 15–30 minutes and cached in Redis keyed by userId. The feed endpoint shall serve from cache on load, not re-compute on demand.
+Recommended â€” Pre-computation
+The Recommended section shall be pre-computed by a background job running every 15â€“30 minutes and cached in Redis 
+keyed by userId. The feed endpoint shall serve from cache on load, not re-compute on demand.
 FR-FEED-07
 Browse All
-GET /api/feed/browse shall accept query parameters: domain[] (multi-select), type[] (multi-select), stipend, location, page, and limit (default 20). Results shall be filtered to status in [open, upcoming]. Sort: priority descending, deadline ascending.
+GET /api/feed/browse shall accept query parameters: domain[] (multi-select), type[] (multi-select), stipend, location, 
+page, and limit (default 20). Results shall be filtered to status in [open, upcoming]. Sort: priority descending, 
+deadline ascending.
 FR-FEED-08
 Filter Persistence
 Browse All filter state shall be persisted in URL query parameters (React Router). Page refresh shall restore filters.
 FR-FEED-09
 Save from Feed
-The Save button on a listing card shall POST /api/activity with { listingId, status: 'saved' }. The UI shall update optimistically and roll back with a toast error if the API call fails.
+The Save button on a listing card shall POST /api/activity with { listingId, status: 'saved' }. The UI shall update 
+optimistically and roll back with a toast error if the API call fails.
 FR-FEED-10
 Ignore from Feed
-The Ignore button shall POST /api/activity with { listingId, status: 'ignored' }. The card shall disappear from feed immediately (optimistic). Ignored listings shall not reappear in Closing Soon or Recommended.
+The Ignore button shall POST /api/activity with { listingId, status: 'ignored' }. The card shall disappear from feed 
+immediately (optimistic). Ignored listings shall not reappear in Closing Soon or Recommended.
 FR-FEED-11
 Dashboard Strip
-The feed page shall display a tracking summary (Saved / Applied / Missed counts) sourced from GET /api/activity/summary.
+The feed page shall display a tracking summary (Saved / Applied / Missed counts) sourced from GET 
+/api/activity/summary.
 FR-FEED-12
 Notification Badge
 The top navigation shall display an unread notification count badge sourced from GET /api/notifications/unread-count.
 FR-FEED-13
 Parallel Load
-On feed page load, the three API calls (feed/sections, activity/summary, notifications/unread-count) shall fire in parallel.
-
+On feed page load, the three API calls (feed/sections, activity/summary, notifications/unread-count) shall fire in 
+parallel.
 3.3 Listing Detail (FR-LST)
 FR-ID
 Req. Name
 Description
 FR-LST-01
 Full Listing Load
-GET /api/listings/:id shall return the full listing document with computed confidenceLevel and dataSourceYear attached. The source's name and verificationLevel shall be populated.
+GET /api/listings/:id shall return the full listing document with computed confidenceLevel and dataSourceYear 
+attached. The source's name and verificationLevel shall be populated.
 FR-LST-02
 Closed/Cancelled Access
-Closed or cancelled listings shall not be returned to students unless they have a saved or applied UserActivity record for that listing.
+Closed or cancelled listings shall not be returned to students unless they have a saved or applied UserActivity record 
+for that listing.
 FR-LST-03
 Header Block
-The listing detail page shall render: organisation logo (or initials fallback), title, orgName, type badge, stipendType, and locationType.
+The listing detail page shall render: organisation logo (or initials fallback), title, orgName, type badge, 
+stipendType, and locationType.
 FR-LST-04
 Status Pill
-A status pill shall display the current listing state (Open, Closing Soon, Upcoming, Closed, Cancelled). A stale warning shall be shown if isStale: true.
+A status pill shall display the current listing state (Open, Closing Soon, Upcoming, Closed, Cancelled). A stale 
+warning shall be shown if isStale: true.
 FR-LST-05
 Curated Badge
 If isCurated: true, a 'Verified listing' indicator shall be displayed.
 FR-LST-06
 Action Bar
-The action bar shall reflect the current UserActivity.status for the authenticated user. Buttons: Save, Mark Applied, Ignore. The notes text field shall be unlocked when status is 'applied'.
+The action bar shall reflect the current UserActivity.status for the authenticated user. Buttons: Save, Mark Applied, 
+Ignore. The notes text field shall be unlocked when status is 'applied'.
 FR-LST-07
 Timeline Card
-The timeline card shall display the deadline with a human-readable confidence label: 'Confirmed' (deadline set for this cycle), 'Based on [YEAR] data' (lastDeadline within 1 year), or 'Approximate — [YEAR] data' (older). Expected window shown when no confirmed deadline exists. Prep start suggestion shown if prepLeadWeeks is set.
+The timeline card shall display the deadline with a human-readable confidence label: 'Confirmed' (deadline set for 
+this cycle), 'Based on [YEAR] data' (lastDeadline within 1 year), or 'Approximate â€” [YEAR] data' (older). Expected 
+window shown when no confirmed deadline exists. Prep start suggestion shown if prepLeadWeeks is set.
 FR-LST-08
 Eligibility Block
-The eligibility block shall list applicable branches and years. It shall display 'You appear eligible' or 'Check eligibility' based on whether the student's currentYear and branch match.
+The eligibility block shall list applicable branches and years. It shall display 'You appear eligible' or 'Check 
+eligibility' based on whether the student's currentYear and branch match.
 FR-LST-09
 Prep Guide Link
 If guideId is set on the listing, a 'Prep guide available' link shall navigate to /app/guide/:id.
@@ -283,50 +316,59 @@ Source Attribution
 The source organisation's name and verificationLevel badge shall be displayed.
 FR-LST-11
 Flag Submission
-A flag button shall open a modal with an issueType selector (dead_link, wrong_deadline, wrong_eligibility, duplicate, other) and an optional proposedFix text field. Submission creates a DataFlag record via POST /api/listings/:id/flag.
+A flag button shall open a modal with an issueType selector (dead_link, wrong_deadline, wrong_eligibility, duplicate, 
+other) and an optional proposedFix text field. Submission creates a DataFlag record via POST /api/listings/:id/flag.
 FR-LST-12
 External Link
 An external link button shall navigate to the listing's externalUrl in a new browser tab.
-
 3.4 Activity Tracking (FR-ACT)
 FR-ID
 Req. Name
 Description
 FR-ACT-01
 Dashboard Load
-GET /api/activity?status=all shall return all UserActivity records for the authenticated user with listing data populated (title, deadline, orgName, status).
+GET /api/activity?status=all shall return all UserActivity records for the authenticated user with listing data 
+populated (title, deadline, orgName, status).
 FR-ACT-02
 Metric Cards
-Three metric cards (Saved, Applied, Missed) shall display counts from GET /api/activity/summary. Tapping a card shall filter the activity list.
+Three metric cards (Saved, Applied, Missed) shall display counts from GET /api/activity/summary. Tapping a card shall 
+filter the activity list.
 FR-ACT-03
 Mark Applied
-Students shall be able to transition a saved listing to applied via PUT /api/activity/:listingId with { status: 'applied' }. This shall set statusUpdatedAt and write an AuditLog entry.
+Students shall be able to transition a saved listing to applied via PUT /api/activity/:listingId with { status: 
+'applied' }. This shall set statusUpdatedAt and write an AuditLog entry.
 FR-ACT-04
 Remove Activity
-Students shall be able to remove any non-missed activity record (deletes the UserActivity document). Missed items are not removable.
+Students shall be able to remove any non-missed activity record (deletes the UserActivity document). Missed items are 
+not removable.
 FR-ACT-05
 Missed Items
-Missed items shall be displayed last in the activity list, visually de-emphasised. The count is intentional — it builds student awareness of missed opportunities.
+Missed items shall be displayed last in the activity list, visually de-emphasised. The count is intentional â€” it 
+builds student awareness of missed opportunities.
 FR-ACT-06
 System-only Missed
-The status 'missed' shall only be set by the system cron job. The student API PUT endpoint shall reject requests to set status: 'missed' with HTTP 403.
+The status 'missed' shall only be set by the system cron job. The student API PUT endpoint shall reject requests to 
+set status: 'missed' with HTTP 403.
 FR-ACT-07
 Optimistic Updates
-All status transitions shall be reflected optimistically in the UI. On API failure, the UI shall roll back with a toast notification.
-
+All status transitions shall be reflected optimistically in the UI. On API failure, the UI shall roll back with a 
+toast notification.
 3.5 Notifications (FR-NOT)
 FR-ID
 Req. Name
 Description
 FR-NOT-01
 Notification List
-GET /api/notifications?page=1&limit=20 shall return notifications sorted by createdAt descending (most recent first). Both read and unread are included. Expired notifications are auto-removed by TTL index.
+GET /api/notifications?page=1&limit=20 shall return notifications sorted by createdAt descending (most recent first). 
+Both read and unread are included. Expired notifications are auto-removed by TTL index.
 FR-NOT-02
 Unread Styling
-Unread notifications shall have a distinct background colour. Each row shows: type icon, payload.title, payload.message, relative timestamp.
+Unread notifications shall have a distinct background colour. Each row shows: type icon, payload.title, 
+payload.message, relative timestamp.
 FR-NOT-03
 Mark Single Read
-Tapping a notification shall call PUT /api/notifications/:id/read (setting status: 'read') and navigate to payload.actionUrl. The userId check on the backend shall prevent reading another user's notification.
+Tapping a notification shall call PUT /api/notifications/:id/read (setting status: 'read') and navigate to 
+payload.actionUrl. The userId check on the backend shall prevent reading another user's notification.
 FR-NOT-04
 Mark All Read
 A 'Mark all read' button shall call PUT /api/notifications/read-all, updating all unread notifications for the user.
@@ -335,34 +377,38 @@ Notification Types
 The system shall support five notification types: deadline_3day, deadline_1day, dont_miss, season_open, cancelled.
 FR-NOT-06
 Payload Immutability
-The notification payload (title, message, actionUrl) is a snapshot captured at creation time. It shall not change if the linked listing is later edited.
+The notification payload (title, message, actionUrl) is a snapshot captured at creation time. It shall not change if 
+the linked listing is later edited.
 FR-NOT-07
 TTL Auto-Delete
-A MongoDB TTL index on the expiresAt field shall automatically delete expired notifications (deadline notifications expire at the listing's deadline date).
+A MongoDB TTL index on the expiresAt field shall automatically delete expired notifications (deadline notifications 
+expire at the listing's deadline date).
 FR-NOT-08
 Frequency Cap
-Don't-miss notifications are capped at 1 per user per week across all listings. Season-open notifications are capped at 1 per domain category per user per month.
-
+Don't-miss notifications are capped at 1 per user per week across all listings. Season-open notifications are capped 
+at 1 per domain category per user per month.
 3.6 Annual Calendar (FR-CAL)
 FR-ID
 Req. Name
 Description
 FR-CAL-01
 Calendar Load
-GET /api/listings/calendar shall return all listings with status in [upcoming, open] that have at least one timeline date field (expectedStart, openDate, or deadline) populated. Response is a lightweight projection: listingId, title, orgName, timeline, status, priority, domainTags.
+GET /api/listings/calendar shall return all listings with status in [upcoming, open] that have at least one timeline 
+date field (expectedStart, openDate, or deadline) populated. Response is a lightweight projection: listingId, title, 
+orgName, timeline, status, priority, domainTags.
 FR-CAL-02
 12-Month View
 The calendar shall display 12 month columns (or stacked rows on mobile). The current month shall be highlighted.
 FR-CAL-03
 Listing Chips
-Each month shall display listing chips for opportunities opening or closing in that month. Colour coding: green = opening this month, amber = closing this month, grey = upcoming.
+Each month shall display listing chips for opportunities opening or closing in that month. Colour coding: green = 
+opening this month, amber = closing this month, grey = upcoming.
 FR-CAL-04
 Chip Navigation
 Tapping a chip shall navigate to /app/listing/:id.
 FR-CAL-05
 Interest Filter
 A toggle shall allow students to filter the calendar to show only listings matching their saved domain interests.
-
 3.7 Profile Settings (FR-PRF)
 FR-ID
 Req. Name
@@ -375,28 +421,31 @@ Interest Update
 Students shall be able to update their domain interests using the same tag picker as onboarding (max 5 selections).
 FR-PRF-03
 Notification Prefs
-All five notification type toggles shall be adjustable. emailEnabled shall control whether email is sent in addition to in-app notifications.
+All five notification type toggles shall be adjustable. emailEnabled shall control whether email is sent in addition 
+to in-app notifications.
 FR-PRF-04
 Save Profile
-PUT /api/user/profile shall persist changes. On success, the frontend shall invalidate the React Query feed cache so the next feed load uses the updated profile.
+PUT /api/user/profile shall persist changes. On success, the frontend shall invalidate the React Query feed cache so 
+the next feed load uses the updated profile.
 FR-PRF-05
 Change Password
-Students shall be able to change their password. The backend shall require the current password before accepting a new one.
-
+Students shall be able to change their password. The backend shall require the current password before accepting a new 
+one.
 3.8 Knowledge Guides (FR-GDE)
 FR-ID
 Req. Name
 Description
 FR-GDE-01
 Guide View
-GET /api/guides/:id shall return the guide document only if isPublished: true. A 404 shall be returned for unpublished or non-existent guides.
+GET /api/guides/:id shall return the guide document only if isPublished: true. A 404 shall be returned for unpublished 
+or non-existent guides.
 FR-GDE-02
 Markdown Rendering
 Guide content (stored as Markdown) shall be rendered using a Markdown renderer component in the student UI.
 FR-GDE-03
 Related Listings
-If the guide has linkedListings, a 'Related opportunities' section shall display links back to those listing detail pages.
-
+If the guide has linkedListings, a 'Related opportunities' section shall display links back to those listing detail 
+pages.
 3.9 Organisation Interface (FR-ORG)
 FR-ID
 Req. Name
@@ -409,21 +458,24 @@ Authenticated Access
 Organisation access is gated by JWT (role: source). Organisations are pre-registered by Admin.
 FR-ORG-03
 Listing Manager
-Organisations shall have access to a Listing Manager that allows them to create and manage their own submitted listings.
+Organisations shall have access to a Listing Manager that allows them to create and manage their own submitted 
+listings.
 FR-ORG-04
 Submission to Queue
-Listings submitted by an Organisation (verificationLevel: unverified or verified) shall enter the Admin submission queue with status: unknown. They shall not auto-publish.
+Listings submitted by an Organisation (verificationLevel: unverified or verified) shall enter the Admin submission 
+queue with status: unknown. They shall not auto-publish.
 FR-ORG-05
 Official Source Direct Publish
-Listings submitted by a source with verificationLevel: official shall be directly published (configurable per-source by Admin).
-
-3.10 Admin — Listing Manager (FR-ADM-LST)
+Listings submitted by a source with verificationLevel: official shall be directly published (configurable per-source 
+by Admin).
+3.10 Admin â€” Listing Manager (FR-ADM-LST)
 FR-ID
 Req. Name
 Description
 FR-ADM-LST-01
 Filterable Table
-GET /api/admin/listings shall support filtering by status, priority, isCurated, isStale. Results shall include aggregated engagement counts (saves, applies, ignores) via a UserActivity lookup.
+GET /api/admin/listings shall support filtering by status, priority, isCurated, isStale. Results shall include 
+aggregated engagement counts (saves, applies, ignores) via a UserActivity lookup.
 FR-ADM-LST-02
 Pagination
 The listing manager shall paginate results (default limit: 30 per page).
@@ -439,20 +491,22 @@ Listings with isStale: true or lastVerifiedAt older than 270 days shall be visua
 FR-ADM-LST-06
 Bulk Actions
 Bulk actions shall include: mark stale, bulk archive.
-
-3.11 Admin — Curation Panel (FR-ADM-CUR)
+3.11 Admin â€” Curation Panel (FR-ADM-CUR)
 FR-ID
 Req. Name
 Description
 FR-ADM-CUR-01
 Full Edit
-The curation panel shall expose all listing fields: content, audience, tags, timeline, status, priority, curation flags, and guide link.
+The curation panel shall expose all listing fields: content, audience, tags, timeline, status, priority, curation 
+flags, and guide link.
 FR-ADM-CUR-02
 Confidence Display
-confidenceLevel and dataSourceYear shall be displayed as derived read-only fields, computed live from the current form values.
+confidenceLevel and dataSourceYear shall be displayed as derived read-only fields, computed live from the current form 
+values.
 FR-ADM-CUR-03
 Optimistic Concurrency
-PUT /api/admin/listings/:id shall reject saves if the submitted version field does not match the current DB version (HTTP 409). The admin must reload before re-saving.
+PUT /api/admin/listings/:id shall reject saves if the submitted version field does not match the current DB version 
+(HTTP 409). The admin must reload before re-saving.
 FR-ADM-CUR-04
 Auto-increment Version
 Each successful save shall increment the listing's version field.
@@ -461,15 +515,19 @@ Audit Trail
 The right panel shall display the last 10 audit entries for the listing.
 FR-ADM-CUR-06
 Cycle Reset
-A 'Cycle Reset' button shall be available only when status: closed and scheduleType is recurring-annual or recurring-irregular. POST /api/admin/listings/:id/cycle-reset shall: copy deadline to lastDeadline, clear openDate and deadline, set status: upcoming, set isCurated: false, increment version. A confirmation dialog shall precede the action.
+A 'Cycle Reset' button shall be available only when status: closed and scheduleType is recurring-annual or 
+recurring-irregular. POST /api/admin/listings/:id/cycle-reset shall: copy deadline to lastDeadline, clear openDate and 
+deadline, set status: upcoming, set isCurated: false, increment version. A confirmation dialog shall precede the 
+action.
 FR-ADM-CUR-07
 Cancellation Notification
-If admin sets status: cancelled, the API shall immediately trigger notification dispatch (type: cancelled) to all users with saved or applied activity on that listing.
+If admin sets status: cancelled, the API shall immediately trigger notification dispatch (type: cancelled) to all 
+users with saved or applied activity on that listing.
 FR-ADM-CUR-08
 Don't-Miss Notification
-If admin sets priority: dont-miss, the API shall immediately dispatch dont_miss notifications to users whose interests overlap the listing's domainTags, subject to frequency cap.
-
-3.12 Admin — Submission Queue (FR-ADM-QUE)
+If admin sets priority: dont-miss, the API shall immediately dispatch dont_miss notifications to users whose interests 
+overlap the listing's domainTags, subject to frequency cap.
+3.12 Admin â€” Submission Queue (FR-ADM-QUE)
 FR-ID
 Req. Name
 Description
@@ -478,29 +536,32 @@ Queue Load
 GET /api/admin/listings?status=unknown&sort=createdAt shall populate the queue with unreviewed submissions.
 FR-ADM-QUE-02
 Approve
-Approve navigates to the full curation panel pre-filled with submitted data. Admin fills missing fields, sets a real status, and saves.
+Approve navigates to the full curation panel pre-filled with submitted data. Admin fills missing fields, sets a real 
+status, and saves.
 FR-ADM-QUE-03
 Reject
-Reject sets the listing status to 'closed' and records a rejection reason in AuditLog. The listing is removed from the queue but retained for history.
-
-3.13 Admin — Source/Organisation Manager (FR-ADM-SRC)
+Reject sets the listing status to 'closed' and records a rejection reason in AuditLog. The listing is removed from the 
+queue but retained for history.
+3.13 Admin â€” Source/Organisation Manager (FR-ADM-SRC)
 FR-ID
 Req. Name
 Description
 FR-ADM-SRC-01
 Source Table
-The source manager shall display a table of all organisations with: name, sourceType, verificationLevel, listing count, isActive toggle.
+The source manager shall display a table of all organisations with: name, sourceType, verificationLevel, listing 
+count, isActive toggle.
 FR-ADM-SRC-02
 Verify
-Verify cycles: unverified → verified → official. PUT /api/admin/sources/:id/verify sets verificationLevel, verifiedAt, and verifiedBy (acting admin's userId).
+Verify cycles: unverified â†’ verified â†’ official. PUT /api/admin/sources/:id/verify sets verificationLevel, 
+verifiedAt, and verifiedBy (acting admin's userId).
 FR-ADM-SRC-03
 Deactivate
-Deactivate requires a confirmation modal explaining that existing listings remain visible. PUT /api/admin/sources/:id/deactivate sets isActive: false. No cascade to listings.
+Deactivate requires a confirmation modal explaining that existing listings remain visible. PUT 
+/api/admin/sources/:id/deactivate sets isActive: false. No cascade to listings.
 FR-ADM-SRC-04
 No Cascade
 Deactivation shall not affect existing listings from that source.
-
-3.14 Admin — DomainTag Manager (FR-ADM-TAG)
+3.14 Admin â€” DomainTag Manager (FR-ADM-TAG)
 FR-ID
 Req. Name
 Description
@@ -512,18 +573,21 @@ Create Tag
 Inline form: slug (auto-generated from displayName, editable), displayName, category. POST /api/admin/tags.
 FR-ADM-TAG-03
 Retire Tag
-The retire flow shall display a modal showing how many listings and users reference the tag. Setting isActive: false soft-deletes the tag. If a replacement slug is provided, the system shall run a background migration updating all Listing.domainTags and User.interests.
+The retire flow shall display a modal showing how many listings and users reference the tag. Setting isActive: false 
+soft-deletes the tag. If a replacement slug is provided, the system shall run a background migration updating all 
+Listing.domainTags and User.interests.
 FR-ADM-TAG-04
 Orphan Handling
-Orphaned tag slugs (from retired tags) in User.interests and Listing.domainTags shall be silently ignored in queries (filter to active tags only). No migration is required when no replacement is specified.
-
-3.15 Admin — Guide Authoring (FR-ADM-GDE)
+Orphaned tag slugs (from retired tags) in User.interests and Listing.domainTags shall be silently ignored in queries 
+(filter to active tags only). No migration is required when no replacement is specified.
+3.15 Admin â€” Guide Authoring (FR-ADM-GDE)
 FR-ID
 Req. Name
 Description
 FR-ADM-GDE-01
 Guide List
-GET /api/admin/guides shall return all guides (published and draft) with title, isPublished toggle, and linkedListings count.
+GET /api/admin/guides shall return all guides (published and draft) with title, isPublished toggle, and linkedListings 
+count.
 FR-ADM-GDE-02
 Split-pane Editor
 The guide editor shall present a split-pane view: left side editable Markdown, right side live preview.
@@ -535,12 +599,12 @@ Link Tags
 Admin shall be able to use the tag picker to add domain tag slugs to linkedTags for general-purpose guides.
 FR-ADM-GDE-05
 Publish
-Publish sets isPublished: true. For each listingId in linkedListings, the system shall set Listing.guideId = guide._id if not already set.
+Publish sets isPublished: true. For each listingId in linkedListings, the system shall set Listing.guideId = guide._id 
+if not already set.
 FR-ADM-GDE-06
 Save as Draft
 Saving without publishing shall not make the guide visible to students.
-
-3.16 Admin — Staleness Queue (FR-ADM-STL)
+3.16 Admin â€” Staleness Queue (FR-ADM-STL)
 FR-ID
 Req. Name
 Description
@@ -549,12 +613,12 @@ Queue Load
 GET /api/admin/listings?isStale=true&sort=lastVerifiedAt shall populate the staleness review queue.
 FR-ADM-STL-02
 Re-verify
-PUT /api/admin/listings/:id/verify sets lastVerifiedAt: now and isStale: false without changing any other fields. AuditLog entry written.
+PUT /api/admin/listings/:id/verify sets lastVerifiedAt: now and isStale: false without changing any other fields. 
+AuditLog entry written.
 FR-ADM-STL-03
 Open in Panel
 Each row shall link to the full curation panel for comprehensive review.
-
-3.17 Admin — Audit Log Viewer (FR-ADM-AUD)
+3.17 Admin â€” Audit Log Viewer (FR-ADM-AUD)
 FR-ID
 Req. Name
 Description
@@ -563,15 +627,16 @@ Read-only
 The audit log viewer is entirely read-only. No edit or delete functionality shall be exposed.
 FR-ADM-AUD-02
 Filters
-Filter bar shall support: category, actorType, dateRange, referenceId (paste a listing/user/source ID to see its full history).
+Filter bar shall support: category, actorType, dateRange, referenceId (paste a listing/user/source ID to see its full 
+history).
 FR-ADM-AUD-03
 Diff Display
-The diff column shall render an expandable JSON cell showing field-level before/after values for edit actions and from/to for status transitions.
+The diff column shall render an expandable JSON cell showing field-level before/after values for edit actions and 
+from/to for status transitions.
 FR-ADM-AUD-04
 Immutability
 AuditLog records are immutable. The backend shall never expose an update or delete endpoint for AuditLog.
-
-3.18 Admin — User Manager (FR-ADM-USR)
+3.18 Admin â€” User Manager (FR-ADM-USR)
 FR-ID
 Req. Name
 Description
@@ -580,36 +645,48 @@ User Table
 Searchable table: name, email, role, status, createdAt, lastLoginAt.
 FR-ADM-USR-02
 Role Change
-Admin can change a user's role (student / admin / source) via a dropdown with confirmation dialog. The change requires an AuditLog entry.
+Admin can change a user's role (student / admin / source) via a dropdown with confirmation dialog. The change requires 
+an AuditLog entry.
 FR-ADM-USR-03
 Suspend / Unsuspend
-Admin can toggle user status between active and suspended. Suspended users are immediately blocked from /app/* routes on next request.
-
+Admin can toggle user status between active and suspended. Suspended users are immediately blocked from /app/* routes 
+on next request.
 3.19 Background Jobs (FR-JOB)
 FR-ID
 Req. Name
 Description
 FR-JOB-01
 Status Transition Cron
-Runs every hour. (1) Opens listings where status: upcoming AND openDate ≤ now. (2) Closes listings where status: open AND deadline ≤ now. Copies deadline → lastDeadline on close. (3) Sets UserActivity records to missed where status: saved AND listing deadline ≤ now. statusUpdatedAt is set to the listing's actual deadline, not the cron run time.
+Runs every hour. (1) Opens listings where status: upcoming AND openDate â‰¤ now. (2) Closes listings where status: 
+open AND deadline â‰¤ now. Copies deadline â†’ lastDeadline on close. (3) Sets UserActivity records to missed where 
+status: saved AND listing deadline â‰¤ now. statusUpdatedAt is set to the listing's actual deadline, not the cron run 
+time.
 FR-JOB-02
 Notification Dispatch Cron
-Runs daily at 08:00. Sends 3-day deadline reminders (in-app + email if enabled) and 1-day deadline reminders (in-app only) to users with saved activity. Checks notificationPrefs.deadlineReminders. Prevents duplicate notifications per (userId, listingId) pair.
+Runs daily at 08:00. Sends 3-day deadline reminders (in-app + email if enabled) and 1-day deadline reminders (in-app 
+only) to users with saved activity. Checks notificationPrefs.deadlineReminders. Prevents duplicate notifications per 
+(userId, listingId) pair.
 FR-JOB-03
 Staleness Flag Cron
-Runs every Sunday at 02:00. Sets isStale: true on listings where lastVerifiedAt < 270 days ago (or is null) and status is in [upcoming, open]. Also flags listings where lastDeadline is older than 2 years.
+Runs every Sunday at 02:00. Sets isStale: true on listings where lastVerifiedAt < 270 days ago (or is null) and status 
+is in [upcoming, open]. Also flags listings where lastDeadline is older than 2 years.
 FR-JOB-04
 Season Window Cron
-Runs 1st of every month at 09:00. Finds listings where timeline.expectedStart = currentMonth and status: upcoming. Dispatches season_open notifications to matching users (interests overlap domainTags, seasonAlerts enabled, not already notified this year). Cap: 1 per domain category per user per month.
+Runs 1st of every month at 09:00. Finds listings where timeline.expectedStart = currentMonth and status: upcoming. 
+Dispatches season_open notifications to matching users (interests overlap domainTags, seasonAlerts enabled, not 
+already notified this year). Cap: 1 per domain category per user per month.
 FR-JOB-05
 Dont-Miss Event Dispatch
-Event-driven (not cron). Triggered immediately when admin sets priority: dont-miss. Dispatches dont_miss notifications to users with matching interests, subject to frequency cap (max 1 per user per 7 days across all listings).
+Event-driven (not cron). Triggered immediately when admin sets priority: dont-miss. Dispatches dont_miss notifications 
+to users with matching interests, subject to frequency cap (max 1 per user per 7 days across all listings).
 FR-JOB-06
 Cancellation Event Dispatch
-Event-driven. Triggered immediately when admin sets status: cancelled. Creates cancelled notifications for all users with saved or applied activity. In-app + email if emailEnabled.
+Event-driven. Triggered immediately when admin sets status: cancelled. Creates cancelled notifications for all users 
+with saved or applied activity. In-app + email if emailEnabled.
 FR-JOB-07
 Recommendation Pre-compute
-Background job running every 15–30 minutes. Recomputes Recommended listing sets for all active users using the eligibility + scoring logic. Stores top 8 results per user in Redis keyed by userId.
+Background job running every 15â€“30 minutes. Recomputes Recommended listing sets for all active users using the 
+eligibility + scoring logic. Stores top 8 results per user in Redis keyed by userId.
 4. Non-Functional Requirements
 4.1 Performance
 FR-ID
@@ -617,30 +694,35 @@ Req. Name
 Description
 NFR-PERF-01
 Feed Load
-The Main Feed page shall render four sections within 2 seconds on a standard broadband connection, achieved by serving the Recommended section from Redis cache and running Closing Soon / Don't Miss queries in parallel.
+The Main Feed page shall render four sections within 2 seconds on a standard broadband connection, achieved by serving 
+the Recommended section from Redis cache and running Closing Soon / Don't Miss queries in parallel.
 NFR-PERF-02
 API Response Time
 All non-feed authenticated API endpoints shall respond in under 500 ms (P95) under normal load.
 NFR-PERF-03
 Recommendation Freshness
-The pre-computed Recommended section shall be refreshed at least every 30 minutes. Cache misses shall trigger on-demand computation and cache population.
+The pre-computed Recommended section shall be refreshed at least every 30 minutes. Cache misses shall trigger 
+on-demand computation and cache population.
 NFR-PERF-04
 DB Index Coverage
-All query patterns described in Section 3 shall be covered by a DB index as documented in the HLD. Full-collection scans shall not occur in production query paths.
-
+All query patterns described in Section 3 shall be covered by a DB index as documented in the HLD. Full-collection 
+scans shall not occur in production query paths.
 4.2 Security
 FR-ID
 Req. Name
 Description
 NFR-SEC-01
 Password Hashing
-All passwords shall be stored as bcrypt hashes with cost factor 12. Plaintext passwords shall never be logged or returned in API responses.
+All passwords shall be stored as bcrypt hashes with cost factor 12. Plaintext passwords shall never be logged or 
+returned in API responses.
 NFR-SEC-02
 JWT Validation
-All /app/* and /admin/* API routes shall validate the JWT on every request. Expired or tampered tokens shall return HTTP 401.
+All /app/* and /admin/* API routes shall validate the JWT on every request. Expired or tampered tokens shall return 
+HTTP 401.
 NFR-SEC-03
 Role Enforcement
-Admin-only endpoints shall verify role: admin server-side. Organisation-only endpoints shall verify role: source. Client-side role checks are supplementary only.
+Admin-only endpoints shall verify role: admin server-side. Organisation-only endpoints shall verify role: source. 
+Client-side role checks are supplementary only.
 NFR-SEC-04
 User Isolation
 Notification and activity endpoints shall enforce userId scoping (users cannot read or modify another user's data).
@@ -649,43 +731,47 @@ Rate Limiting
 The system shall apply rate limiting. Organisation submission endpoints are rate-limited as appropriate.
 NFR-SEC-06
 Input Validation
-All API inputs shall be validated server-side using a schema validation library (e.g., Zod or Joi). Invalid inputs shall return HTTP 422 with field-level error messages.
+All API inputs shall be validated server-side using a schema validation library (e.g., Zod or Joi). Invalid inputs 
+shall return HTTP 422 with field-level error messages.
 NFR-SEC-07
 No Sensitive Logging
 JWT tokens, passwords, and contact emails shall not appear in server logs.
-
 4.3 Reliability & Availability
 FR-ID
 Req. Name
 Description
 NFR-REL-01
 Free-tier Tolerance
-The system architecture accepts the cold-start latency of Render's free tier (up to 30 seconds). A loading state shall be shown to users during cold start.
+The system architecture accepts the cold-start latency of Render's free tier (up to 30 seconds). A loading state shall 
+be shown to users during cold start.
 NFR-REL-02
 Optimistic UI
-All student-facing mutations (save, ignore, mark applied) shall use optimistic UI with rollback on failure, ensuring a responsive experience despite network latency.
+All student-facing mutations (save, ignore, mark applied) shall use optimistic UI with rollback on failure, ensuring a 
+responsive experience despite network latency.
 NFR-REL-03
 Cron Resilience
-Cron jobs shall be idempotent — re-running a job shall not create duplicate notifications or double-transition statuses.
-
+Cron jobs shall be idempotent â€” re-running a job shall not create duplicate notifications or double-transition 
+statuses.
 4.4 Scalability
 FR-ID
 Req. Name
 Description
 NFR-SCA-01
 Index-first Design
-All MongoDB queries are designed around existing indexes. New query patterns shall require an index to be added before the route is deployed.
+All MongoDB queries are designed around existing indexes. New query patterns shall require an index to be added before 
+the route is deployed.
 NFR-SCA-02
 V2 Additive
-The schema and API are designed so all documented V2 features (scrapers, OAuth, Organisation accounts, full-text search) can be added without breaking changes to V1 data or API contracts.
-
+The schema and API are designed so all documented V2 features (scrapers, OAuth, Organisation accounts, full-text 
+search) can be added without breaking changes to V1 data or API contracts.
 4.5 Maintainability
 FR-ID
 Req. Name
 Description
 NFR-MNT-01
 Audit Coverage
-Every state-changing operation (listing save, status change, user role change, tag retirement) shall write an AuditLog entry with a diff object.
+Every state-changing operation (listing save, status change, user role change, tag retirement) shall write an AuditLog 
+entry with a diff object.
 NFR-MNT-02
 Immutable Audit Log
 No update or delete operations shall be permitted on AuditLog records.
@@ -694,29 +780,29 @@ Version Concurrency
 The version field on Listing shall be used for optimistic concurrency checks in all admin save operations.
 NFR-MNT-04
 Dead Tag Safety
-Retired DomainTags (isActive: false) shall be silently ignored in all queries. No migration is required unless a replacement slug is specified.
+Retired DomainTags (isActive: false) shall be silently ignored in all queries. No migration is required unless a 
+replacement slug is specified.
 5. External Interface Requirements
 5.1 User Interface
 The application shall be a single-page application (SPA) built with React and React Router v6.
 The design system follows the AccentSketch theme: a professional SaaS UI with a removable hand-drawn personality layer.
 The colour palette is centred on dark navy (#1B2A4A) as the primary brand colour and amber (#E6A817) as the accent.
 All student-facing pages shall be responsive and usable on mobile viewports (minimum 360px width).
-Markdown content (listing descriptions, guide content) shall be rendered using a client-side Markdown renderer (e.g., react-markdown).
-
+Markdown content (listing descriptions, guide content) shall be rendered using a client-side Markdown renderer (e.g., 
+react-markdown).
 5.2 API Interface
 All API endpoints shall use REST conventions with JSON request/response bodies.
 Authentication is performed via Bearer JWT in the Authorization header.
 API versioning is not required in V1; all routes are under /api/*.
 Error responses shall use standard HTTP status codes with a JSON body: { error: 'message', field?: 'field_name' }.
 The API base URL for V1 is the Render deployment URL configured via an environment variable in the React app.
-
 5.3 Database Interface
 The application communicates with MongoDB Atlas via Mongoose ODM.
 The connection string is stored as an environment variable (MONGODB_URI).
 The Redis cache for recommendation pre-computation is accessed via the ioredis or upstash/redis client.
-
 5.4 Communication Interface
-Outbound email is sent via Nodemailer using SMTP. The sending email address and SMTP credentials are stored as environment variables.
+Outbound email is sent via Nodemailer using SMTP. The sending email address and SMTP credentials are stored as 
+environment variables.
 Email templates are plain HTML with inline CSS for maximum email client compatibility.
 No inbound email processing is required in V1.
 6. System Constraints
@@ -744,5 +830,6 @@ Link Checking
 isUrlBroken is always false in V1. No background link-checking is implemented.
 Confidence Level
 confidenceLevel and dataSourceYear are derived fields. They are never stored; always computed at read time.
+End of Software Requirements Specification â€” COA-SRS-001 v1.0
 
-End of Software Requirements Specification — COA-SRS-001 v1.0
+

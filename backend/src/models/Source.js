@@ -16,7 +16,7 @@ const sourceSchema = new mongoose.Schema({
   },
   verificationLevel: {
     type: String,
-    enum: ['unverified', 'verified', 'official'],
+    enum: ['unverified', 'verified', 'official', 'student'],
     default: 'unverified'
   },
   verifiedAt: {

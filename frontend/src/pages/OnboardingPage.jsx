@@ -1,145 +1,178 @@
 import { useState } from 'react';
 import { useAuth, api } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, ChevronLeft, Check } from 'lucide-react';
-
+import { ChevronRight, ChevronLeft, CheckCircle2, Rocket, Sparkles } from 'lucide-react';
 import { BRANCHES, TAGS } from '../constants';
 
-function OnboardingPage() {
+// UI Components
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Select from '../components/ui/Select';
+import TagPicker from '../components/ui/TagPicker';
+import ProgressIndicator from '../components/ui/ProgressIndicator';
+import { useToast } from '../context/ToastContext';
+
+const ONBOARDING_STEPS = ['Academic', 'Interests', 'All Set'];
+
+export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     branch: 'CSE',
     currentYear: 1,
     interests: []
   });
-  const { user, updateOnboarding } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { updateOnboarding } = useAuth();
+  const { addToast } = useToast();
   const navigate = useNavigate();
 
-  const handleInterestToggle = (tagId) => {
-    setFormData(prev => ({
-      ...prev,
-      interests: prev.interests.includes(tagId)
-        ? prev.interests.filter(id => id !== tagId)
-        : prev.interests.length < 5 ? [...prev.interests, tagId] : prev.interests
-    }));
-  };
-
   const handleComplete = async () => {
+    setIsSubmitting(true);
     try {
       const { data } = await api.put('/user/onboarding', formData);
       updateOnboarding(data);
+      addToast({
+        title: 'Welcome Aboard!',
+        message: "Your profile is set. Let's find some opportunities.",
+        type: 'success'
+      });
       navigate('/app/feed');
     } catch (error) {
       console.error('Onboarding failed', error);
+      addToast({
+        title: 'Signup Error',
+        message: 'Could not save your preferences. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  const nextStep = () => {
+    if (step === 2 && formData.interests.length === 0) {
+      addToast({
+        title: 'Interests Required',
+        message: 'Please select at least one interest to personalize your feed.',
+        type: 'warning'
+      });
+      return;
+    }
+    setStep(step + 1);
+  };
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50 p-6">
-      <div className="w-full max-w-lg p-8 bg-white border-2 rounded-2xl border-primary-navy shadow-[8px_8px_0px_0px_rgba(27,42,74,1)]">
-        
-        {/* Progress Bar */}
-        <div className="flex mb-8 justify-between">
-          {[1, 2, 3].map(s => (
-            <div key={s} className={`h-2 flex-1 mx-1 rounded-full transition-colors ${step >= s ? 'bg-accent-amber' : 'bg-slate-200'}`} />
-          ))}
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl relative overflow-hidden">
+          
+          <ProgressIndicator steps={ONBOARDING_STEPS} currentStep={step} />
 
-        {step === 1 && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            <h2 className="text-2xl font-bold text-primary-navy">Academics</h2>
-            <p className="text-slate-600">Tell us what you're studying so we can filter opportunities for you.</p>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Branch</label>
-              <select 
-                value={formData.branch}
-                onChange={e => setFormData({...formData, branch: e.target.value})}
-                className="w-full p-3 border-2 rounded-xl outline-none focus:border-accent-amber appearance-none bg-white"
-              >
-                {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Current Year: {formData.currentYear}</label>
-              <input 
-                type="range" min="1" max="6" step="1"
-                value={formData.currentYear}
-                onChange={e => setFormData({...formData, currentYear: parseInt(e.target.value)})}
-                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary-navy"
-              />
-              <div className="flex justify-between text-xs text-slate-500 mt-2">
-                <span>Year 1</span>
-                <span>Year 6</span>
+          {step === 1 && (
+            <div className="space-y-8 animate-in fade-in duration-500 delay-150">
+              <div className="space-y-4">
+                <div className="inline-flex p-3 bg-blue-50 border border-blue-100 rounded-2xl text-blue-600">
+                  <Rocket size={24} />
+                </div>
+                <h2 className="text-3xl font-black text-primary-navy tracking-tight">Academic Focus</h2>
+                <p className="text-slate-500 font-medium leading-relaxed">
+                  Tell us what you're studying. This helps us prioritize opportunities that match your degree path.
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Select
+                  label="Branch / Major"
+                  options={BRANCHES.map(b => ({ label: b, value: b }))}
+                  value={formData.branch}
+                  onChange={(v) => setFormData({ ...formData, branch: v })}
+                  searchable
+                />
+                
+                <Input
+                  label="Current Year"
+                  type="number"
+                  min="1"
+                  max="6"
+                  value={formData.currentYear}
+                  onChange={(e) => setFormData({ ...formData, currentYear: parseInt(e.target.value) })}
+                  helperText="1st to 6th year"
+                />
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {step === 2 && (
-          <div className="space-y-6 animate-in slide-in-from-right duration-300">
-            <h2 className="text-2xl font-bold text-primary-navy">Interests</h2>
-            <p className="text-slate-600">Select up to 5 domains you're interested in.</p>
+          {step === 2 && (
+            <div className="space-y-8 animate-in slide-in-from-right-8 fade-in duration-500">
+              <div className="space-y-4">
+                <div className="inline-flex p-3 bg-amber-50 border border-amber-100 rounded-2xl text-amber-600">
+                  <Sparkles size={24} />
+                </div>
+                <h2 className="text-3xl font-black text-primary-navy tracking-tight">Focus Domains</h2>
+                <p className="text-slate-500 font-medium leading-relaxed">
+                  What are you passionate about? Select up to 8 areas to customize your recommendation engine.
+                </p>
+              </div>
+              
+              <TagPicker
+                tags={TAGS}
+                selectedTags={formData.interests}
+                onChange={(tags) => setFormData({ ...formData, interests: tags })}
+                max={8}
+              />
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-8 text-center animate-in zoom-in-95 fade-in duration-500">
+              <div className="relative inline-block">
+                <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto border-2 border-emerald-100 mb-6">
+                  <CheckCircle2 size={48} className="text-emerald-500" />
+                </div>
+                <div className="absolute -top-2 -right-2 w-8 h-8 bg-amber-400 rounded-full animate-bounce flex items-center justify-center border-2 border-white">
+                  <Sparkles size={16} className="text-white" />
+                </div>
+              </div>
+              <div className="space-y-4 px-4">
+                <h2 className="text-4xl font-black text-primary-navy tracking-tight">You're All Set!</h2>
+                <p className="text-slate-500 font-medium text-lg">
+                  We've curated a personalized feed of {formData.interests.length} focus areas. Your journey starts now.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div className="mt-12 pt-8 border-t border-slate-50 flex items-center justify-between">
+            {step > 1 ? (
+              <Button 
+                variant="ghost" 
+                onClick={() => setStep(step - 1)}
+                iconLeading={ChevronLeft}
+              >
+                Back
+              </Button>
+            ) : <div />}
             
-            <div className="flex flex-wrap gap-2">
-              {TAGS.map(tag => (
-                <button
-                  key={tag.id}
-                  onClick={() => handleInterestToggle(tag.id)}
-                  className={`px-4 py-2 rounded-full border-2 font-medium transition-all ${
-                    formData.interests.includes(tag.id)
-                      ? 'bg-primary-navy text-white border-primary-navy'
-                      : 'bg-white text-primary-navy border-slate-200 hover:border-accent-amber'
-                  }`}
-                >
-                  {tag.name}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-slate-400 text-center">{formData.interests.length}/5 selected</p>
+            {step < 3 ? (
+              <Button 
+                onClick={nextStep}
+                iconTrailing={ChevronRight}
+              >
+                Continue
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleComplete}
+                loading={isSubmitting}
+                className="px-12 py-5 text-lg"
+              >
+                Enter Platform
+              </Button>
+            )}
           </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-6 text-center animate-in zoom-in duration-300">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Check className="w-10 h-10 text-green-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-primary-navy">All Set!</h2>
-            <p className="text-slate-600">We've personalized your feed. Ready to discover opportunities?</p>
-          </div>
-        )}
-
-        <div className="mt-10 flex justify-between gap-4">
-          {step > 1 && (
-            <button 
-              onClick={() => setStep(step - 1)}
-              className="flex items-center gap-2 px-6 py-2 font-bold text-primary-navy hover:text-accent-amber transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5" /> Back
-            </button>
-          )}
-          
-          {step < 3 ? (
-            <button 
-              onClick={() => setStep(step + 1)}
-              className="ml-auto flex items-center gap-2 px-8 py-3 bg-primary-navy text-white font-bold rounded-xl active:scale-95 transition-transform"
-            >
-              Next <ChevronRight className="w-5 h-5" />
-            </button>
-          ) : (
-            <button 
-              onClick={handleComplete}
-              className="w-full py-4 bg-accent-amber text-primary-navy font-black text-xl rounded-xl shadow-[4px_4px_0px_0px_rgba(27,42,74,1)] active:scale-95 transition-transform"
-            >
-              GET STARTED
-            </button>
-          )}
         </div>
       </div>
     </div>
   );
 }
-
-export default OnboardingPage;

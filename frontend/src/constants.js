@@ -1,4 +1,5 @@
 export const BRANCHES = ['CE', 'EEE', 'ME', 'ECE', 'CSE', 'EIE', 'IT', 'AE', 'CSBS', 'CS-AIML', 'CS-DS', 'CS-IOT', 'AI & DS', 'CS-CyS', 'ECE - VLSI', 'R&AI', 'Bio-Tech'];
+export const BRANCH_OPTIONS = BRANCHES;
 
 export const TAGS = [
   { id: 'frontend', name: 'Frontend' },

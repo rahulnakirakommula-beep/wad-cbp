@@ -16,6 +16,16 @@ const protect = asyncHandler(async (req, res, next) => {
       // Get user from the token
       req.user = await User.findById(decoded.id).select('-passwordHash');
 
+      if (!req.user) {
+        res.status(401);
+        throw new Error('User not found');
+      }
+
+      if (req.user.status === 'suspended') {
+        res.status(403);
+        throw new Error('User account is suspended');
+      }
+
       next();
     } catch (error) {
       console.error(error);

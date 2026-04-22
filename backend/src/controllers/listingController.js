@@ -98,7 +98,15 @@ const getExploreListings = asyncHandler(async (req, res) => {
   // Filter by branch eligibility
   if (branches) {
     const branchesArray = branches.split(',');
-    query['targetAudience.branches'] = { $in: branchesArray };
+    query.$or = query.$or || [];
+    query.$and = query.$and || [];
+    query.$and.push({
+      $or: [
+        { 'targetAudience.branches': { $in: branchesArray } },
+        { 'targetAudience.branches': { $size: 0 } },
+        { 'targetAudience.branches': { $exists: false } }
+      ]
+    });
   }
 
   // Define sort

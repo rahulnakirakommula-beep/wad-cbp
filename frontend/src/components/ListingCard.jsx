@@ -1,7 +1,7 @@
 import { Calendar, Briefcase, MapPin, Bookmark, ExternalLink, Flag } from 'lucide-react';
 
 function ListingCard({ listing, onSave, onIgnore, onFlag }) {
-  const { title, orgName, type, stipendType, locationType, timeline, priority } = listing;
+  const { title, orgName, type, stipendType, locationType, timeline, priority, confidenceLevel, dataSourceYear } = listing;
 
   const isClosingSoon = () => {
     if (!timeline?.deadline) return false;
@@ -22,7 +22,22 @@ function ListingCard({ listing, onSave, onIgnore, onFlag }) {
         <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center font-bold text-slate-400 border border-slate-100">
           {orgName.substring(0, 2).toUpperCase()}
         </div>
-        <div className="flex gap-1">
+        <div className="flex-1 ml-3">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{orgName}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${
+              confidenceLevel === 'Confirmed' 
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                : confidenceLevel === 'Based on Historical Data'
+                ? 'bg-blue-50 border-blue-200 text-blue-600'
+                : 'bg-slate-50 border-slate-200 text-slate-500'
+            }`}>
+              {confidenceLevel === 'Based on Historical Data' && dataSourceYear 
+                ? `Est. from ${dataSourceYear}` 
+                : confidenceLevel}
+            </span>
+          </div>
+        </div>
           <button 
             onClick={() => onFlag(listing._id)}
             className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -41,7 +56,6 @@ function ListingCard({ listing, onSave, onIgnore, onFlag }) {
       </div>
 
       <div className="flex-1">
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{orgName}</p>
         <h3 className="text-lg font-bold text-primary-navy leading-tight mb-3 group-hover:text-accent-amber transition-colors">
           {title}
         </h3>

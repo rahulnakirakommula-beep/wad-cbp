@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; }
+        .btn { display: inline-block; padding: 12px 24px; background-color: #e6a817; color: #001f3f; text-decoration: none; border-radius: 5px; font-weight: bold; }
+        .footer { margin-top: 30px; font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Welcome to COA, <%= name %>!</h2>
+        <p>Thanks for joining Campus Opportunity Aggregator. To get started and explore personalized opportunities, please verify your email address by clicking the button below:</p>
+        <p style="text-align: center; margin: 30px 0;">
+            <a href="<%= actionUrl %>" class="btn">Verify Email Address</a>
+        </p>
+        <p>If the button doesn't work, copy and paste this link into your browser:</p>
+        <p><small><%= actionUrl %></small></p>
+        <div class="footer">
+            <p>If you didn't create an account, you can safely ignore this email.</p>
+        </div>
+    </div>
+</body>
+</html>

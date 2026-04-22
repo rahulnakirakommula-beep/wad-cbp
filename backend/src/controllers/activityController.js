@@ -90,9 +90,33 @@ const getActivities = asyncHandler(async (req, res) => {
   res.json(activities);
 });
 
+// @desc    Delete user activity
+// @route   DELETE /api/activity/:listingId
+// @access  Private
+const deleteActivity = asyncHandler(async (req, res) => {
+  const activity = await UserActivity.findOne({ 
+    userId: req.user._id, 
+    listingId: req.params.listingId 
+  });
+
+  if (!activity) {
+    res.status(404);
+    throw new Error('Activity record not found');
+  }
+
+  if (activity.status === 'missed') {
+    res.status(403);
+    throw new Error('Missed listings cannot be removed from dashboard');
+  }
+
+  await activity.deleteOne();
+  res.json({ message: 'Activity removed successully' });
+});
+
 module.exports = {
   upsertActivity,
   updateActivity,
   getActivitySummary,
-  getActivities
+  getActivities,
+  deleteActivity
 };

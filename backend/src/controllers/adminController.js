@@ -3,6 +3,7 @@ const Listing = require('../models/Listing');
 const User = require('../models/User');
 const Source = require('../models/Source');
 const DomainTag = require('../models/DomainTag');
+const KnowledgeGuide = require('../models/KnowledgeGuide');
 const DataFlag = require('../models/DataFlag');
 const AuditLog = require('../models/AuditLog');
 
@@ -108,6 +109,11 @@ const resetListingCycle = asyncHandler(async (req, res) => {
     throw new Error('Listing not found');
   }
 
+  if (listing.status !== 'closed' || listing.scheduleType !== 'recurring') {
+    res.status(400);
+    throw new Error('Only closed, recurring listings can be reset.');
+  }
+
   const oldValues = {
     status: listing.status,
     deadline: listing.timeline.deadline,
@@ -132,6 +138,27 @@ const resetListingCycle = asyncHandler(async (req, res) => {
   res.json(listing);
 });
 
+// @desc    Quick verify a listing (reset staleness)
+// @route   POST /api/admin/listings/:id/verify
+// @access  Private/Admin
+const verifyListingStaleness = asyncHandler(async (req, res) => {
+  const listing = await Listing.findById(req.params.id);
+
+  if (!listing) {
+    res.status(404);
+    throw new Error('Listing not found');
+  }
+
+  listing.lastVerifiedAt = Date.now();
+  listing.isStale = false;
+  listing.version += 1;
+  await listing.save();
+
+  await createAudit(req.user._id, 'user', 'listing', 'quick_verified', listing._id);
+
+  res.json(listing);
+});
+
 // @desc    Verify/Update a source
 // @route   PUT /api/admin/sources/:id/verify
 // @access  Private/Admin
@@ -145,11 +172,32 @@ const verifySource = asyncHandler(async (req, res) => {
   }
 
   source.verificationLevel = verificationLevel || source.verificationLevel;
+  source.verifiedAt = Date.now();
+  source.verifiedBy = req.user._id;
   await source.save();
 
   await createAudit(req.user._id, 'user', 'source', 'verified', source._id, { verificationLevel });
 
   res.json(source);
+});
+
+// @desc    Deactivate a source
+// @route   PUT /api/admin/sources/:id/deactivate
+// @access  Private/Admin
+const deactivateSource = asyncHandler(async (req, res) => {
+  const source = await Source.findById(req.params.id);
+
+  if (!source) {
+    res.status(404);
+    throw new Error('Source not found');
+  }
+
+  source.isActive = false;
+  await source.save();
+
+  await createAudit(req.user._id, 'user', 'source', 'deactivated', source._id);
+
+  res.json({ message: 'Source deactivated successfully' });
 });
 
 // @desc    Get all sources
@@ -207,14 +255,121 @@ const getAdminStats = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get all tags for admin
+// @route   GET /api/admin/tags
+// @access  Private/Admin
+const getAdminTags = asyncHandler(async (req, res) => {
+  const tags = await DomainTag.find().sort({ category: 1, name: 1 });
+  res.json(tags);
+});
+
+// @desc    Create a new tag
+// @route   POST /api/admin/tags
+// @access  Private/Admin
+const createTag = asyncHandler(async (req, res) => {
+  const { name, category } = req.body;
+  const tag = await DomainTag.create({ name, category, isActive: true });
+  await createAudit(req.user._id, 'user', 'tag', 'created', tag._id);
+  res.status(201).json(tag);
+});
+
+// @desc    Update a tag status
+// @route   PUT /api/admin/tags/:id
+// @access  Private/Admin
+const updateTag = asyncHandler(async (req, res) => {
+  const tag = await DomainTag.findById(req.params.id);
+  if (!tag) {
+    res.status(404);
+    throw new Error('Tag not found');
+  }
+  Object.assign(tag, req.body);
+  await tag.save();
+  await createAudit(req.user._id, 'user', 'tag', 'updated', tag._id, req.body);
+  res.json(tag);
+});
+
+// @desc    Get all guides for admin
+// @route   GET /api/admin/guides
+// @access  Private/Admin
+const getAdminGuides = asyncHandler(async (req, res) => {
+  const guides = await KnowledgeGuide.find().sort({ title: 1 });
+  res.json(guides);
+});
+
+// @desc    Create a new guide
+// @route   POST /api/admin/guides
+// @access  Private/Admin
+const createGuide = asyncHandler(async (req, res) => {
+  const guide = await KnowledgeGuide.create(req.body);
+  await createAudit(req.user._id, 'user', 'guide', 'created', guide._id);
+  res.status(201).json(guide);
+});
+
+// @desc    Update a guide
+// @route   PUT /api/admin/guides/:id
+// @access  Private/Admin
+const updateGuide = asyncHandler(async (req, res) => {
+  const guide = await KnowledgeGuide.findById(req.params.id);
+  if (!guide) {
+    res.status(404);
+    throw new Error('Guide not found');
+  }
+  Object.assign(guide, req.body);
+  await guide.save();
+  await createAudit(req.user._id, 'user', 'guide', 'updated', guide._id, req.body);
+  res.json(guide);
+});
+
+// @desc    Get all users for admin
+// @route   GET /api/admin/users
+// @access  Private/Admin
+const getAdminUsers = asyncHandler(async (req, res) => {
+  const users = await User.find().select('-passwordHash').sort({ createdAt: -1 });
+  res.json(users);
+});
+
+// @desc    Update user status (suspend/unsuspend)
+// @route   PUT /api/admin/users/:id/status
+// @access  Private/Admin
+const updateUserStatus = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+  user.status = req.body.status;
+  await user.save();
+  await createAudit(req.user._id, 'user', 'user_management', `status_${req.body.status}`, user._id);
+  res.json({ message: `User status updated to ${req.body.status}` });
+});
+
+// @desc    Get system audit logs
+// @route   GET /api/admin/audit
+// @access  Private/Admin
+const getAuditLogs = asyncHandler(async (req, res) => {
+  const logs = await AuditLog.find().sort({ createdAt: -1 }).limit(100);
+  res.json(logs);
+});
+
 module.exports = {
   getAdminListings,
   createListing,
   updateListing,
   resetListingCycle,
+  verifyListingStaleness,
   verifySource,
+  deactivateSource,
   getFlags,
   reviewFlag,
   getAdminStats,
-  getSources
+  getSources,
+  getAdminTags,
+  createTag,
+  updateTag,
+  getAdminGuides,
+  createGuide,
+  updateGuide,
+  getAdminUsers,
+  updateUserStatus,
+  getAuditLogs
 };

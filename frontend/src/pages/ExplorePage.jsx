@@ -1,20 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../context/AuthContext';
-import ListingCard from '../components/ListingCard';
-import { Loader2, Search, SlidersHorizontal, X } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Search, SlidersHorizontal, X, Filter } from 'lucide-react';
+
+// UI Components
+import ListingCard from '../components/ui/ListingCard';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Pagination from '../components/ui/Pagination';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
+import { useToast } from '../context/ToastContext';
 
 import { DOMAIN_OPTIONS, BRANCH_OPTIONS } from '../constants';
 
-function ExplorePage() {
+export default function ExplorePage() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
-  const [selectedDomains, setSelectedDomains] = useState([]);
-  const [selectedBranches, setSelectedBranches] = useState([]);
-  const [page, setPage] = useState(1);
+  const navigate = useNavigate();
+  const { addToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Fetch Explore Listings
-  const { data, isLoading, isPlaceholderData } = useQuery({
+  // State derived from URL
+  const [search, setSearch] = useState(searchParams.get('q') || '');
+  const [selectedDomains, setSelectedDomains] = useState(searchParams.get('domains')?.split(',').filter(Boolean) || []);
+  const [selectedBranches, setSelectedBranches] = useState(searchParams.get('branches')?.split(',').filter(Boolean) || []);
+  const [page, setPage] = useState(parseInt(searchParams.get('page')) || 1);
+
+  // Sync URL on state change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('q', search);
+    if (selectedDomains.length > 0) params.set('domains', selectedDomains.join(','));
+    if (selectedBranches.length > 0) params.set('branches', selectedBranches.join(','));
+    if (page > 1) params.set('page', page.toString());
+    setSearchParams(params, { replace: true });
+  }, [search, selectedDomains, selectedBranches, page]);
+
+  // Fetch Logic
+  const { data, isLoading, isPlaceholderData, refetch } = useQuery({
     queryKey: ['explore', search, selectedDomains, selectedBranches, page],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -30,8 +54,7 @@ function ExplorePage() {
     placeholderData: (previousData) => previousData
   });
 
-  // Activity mutation
-  const activityMutation = useMutation({
+  const interactionMutation = useMutation({
     mutationFn: async ({ listingId, status }) => {
       return api.post('/activity', { listingId, status });
     },
@@ -41,160 +64,136 @@ function ExplorePage() {
     }
   });
 
-  // Flag Mutation
-  const flagMutation = useMutation({
-    mutationFn: async ({ listingId, issueType, proposedFix }) => {
-      return api.post(`/listings/${listingId}/flag`, { issueType, proposedFix });
-    },
-    onSuccess: () => {
-      alert('Thanks! Admin will review this shortly.');
-    }
-  });
-
-  const handleFlag = (listingId) => {
-    const fix = prompt('What is wrong with this listing? (Optional)');
-    if (fix !== null) {
-      flagMutation.mutate({ listingId, issueType: 'other', proposedFix: fix });
-    }
-  };
-
   const toggleFilter = (list, setList, item) => {
-    if (list.includes(item)) {
-      setList(list.filter(i => i !== item));
-    } else {
-      setList([...list, item]);
-    }
-    setPage(1); // Reset to page 1 on filter change
+    setList(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
+    setPage(1);
   };
+
+  const clearFilters = () => {
+    setSearch('');
+    setSelectedDomains([]);
+    setSelectedBranches([]);
+    setPage(1);
+  };
+
+  const handleNavigate = (id) => navigate(`/app/listing/${id}`);
+
+  const activeFilterCount = selectedDomains.length + selectedBranches.length;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="space-y-10 pb-20">
+      {/* Header Area */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
+        <div className="space-y-1 text-center md:text-left w-full md:w-auto">
+          <h1 className="text-3xl sm:text-4xl font-black text-primary-navy tracking-tight">Explore</h1>
+          <p className="text-slate-500 font-medium italic">Discover fellowships, workshops, and high-impact roles.</p>
+        </div>
+      </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        <header className="mb-10 text-center">
-          <h1 className="text-4xl font-black text-primary-navy tracking-tight mb-4">Explore Opportunities</h1>
-          <p className="text-slate-500 font-medium">Browse everything from internships to global hackathons.</p>
-        </header>
+      {/* Filter Section */}
+      <div className="bg-white border-2 border-slate-100 rounded-[2.5rem] p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <Input
+              placeholder="Search by title, skill, or organization..."
+              iconLeading={Search}
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="py-4"
+            />
+          </div>
+          <Button 
+            variant={activeFilterCount > 0 ? 'accent' : 'secondary'}
+            onClick={clearFilters}
+            className="whitespace-nowrap h-[60px]"
+            iconLeading={activeFilterCount > 0 ? X : SlidersHorizontal}
+          >
+            {activeFilterCount > 0 ? `Clear (${activeFilterCount})` : 'Filters'}
+          </Button>
+        </div>
 
-        {/* Search & Filter Bar */}
-        <section className="bg-white border-2 border-slate-100 rounded-[2rem] p-8 mb-10 shadow-sm">
-          <div className="flex flex-col md:flex-row gap-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-              <input 
-                type="text" 
-                placeholder="Search by title, organization..." 
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-primary-navy placeholder:text-slate-300 focus:outline-none focus:border-primary-navy transition-all"
-              />
+        <div className="space-y-6 pt-4 border-t border-slate-50">
+          <FilterSection 
+            label="Domains" 
+            items={DOMAIN_OPTIONS} 
+            selected={selectedDomains} 
+            onToggle={(item) => toggleFilter(selectedDomains, setSelectedDomains, item)} 
+          />
+          <FilterSection 
+            label="Eligible Branches" 
+            items={BRANCH_OPTIONS} 
+            selected={selectedBranches} 
+            onToggle={(item) => toggleFilter(selectedBranches, setSelectedBranches, item)} 
+          />
+        </div>
+      </div>
+
+      {/* Results Section */}
+      <div className="space-y-8">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+            Showing <span className="text-primary-navy">{data?.totalListings || 0}</span> Opportunities
+          </h2>
+        </div>
+
+        {isLoading && !isPlaceholderData ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map(i => <Skeleton.Card key={i} />)}
+          </div>
+        ) : data?.listings?.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {data.listings.map(listing => (
+                <ListingCard
+                  key={listing._id || listing.id}
+                  listing={listing}
+                  onSave={(id) => interactionMutation.mutate({ listingId: id, status: 'saved' })}
+                  onIgnore={(id) => interactionMutation.mutate({ listingId: id, status: 'ignored' })}
+                  onNavigate={handleNavigate}
+                />
+              ))}
             </div>
             
-            <button className="px-8 py-4 bg-primary-navy text-white rounded-2xl font-bold flex items-center justify-center gap-3">
-              <Search size={20} /> Search
-            </button>
-          </div>
-
-          <div className="mt-8 flex flex-col gap-6 pt-8 border-t-2 border-slate-50">
-            <div>
-              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Domains</p>
-              <div className="flex flex-wrap gap-2">
-                {DOMAIN_OPTIONS.map(domain => (
-                  <FilterChip 
-                    key={domain} 
-                    label={domain} 
-                    active={selectedDomains.includes(domain)} 
-                    onClick={() => toggleFilter(selectedDomains, setSelectedDomains, domain)} 
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Eligible Branches</p>
-              <div className="flex flex-wrap gap-2">
-                {BRANCH_OPTIONS.map(branch => (
-                  <FilterChip 
-                    key={branch} 
-                    label={branch} 
-                    active={selectedBranches.includes(branch)} 
-                    onClick={() => toggleFilter(selectedBranches, setSelectedBranches, branch)} 
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Results Grid */}
-        <section className="relative">
-          {isLoading && !isPlaceholderData ? (
-            <div className="flex justify-center py-20">
-              <Loader2 className="w-12 h-12 text-primary-navy animate-spin" />
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {data?.listings?.length === 0 ? (
-                  <div className="col-span-full py-20 text-center bg-white border-2 border-dashed border-slate-200 rounded-[2rem]">
-                    <p className="text-xl font-black text-slate-300 italic">No matches found. Try adjusting your lens.</p>
-                  </div>
-                ) : (
-                  data?.listings?.map(listing => (
-                    <ListingCard 
-                      key={listing._id} 
-                      listing={listing} 
-                      onSave={(id) => activityMutation.mutate({ listingId: id, status: 'saved' })}
-                      onIgnore={(id) => activityMutation.mutate({ listingId: id, status: 'ignored' })}
-                      onFlag={handleFlag}
-                    />
-                  ))
-                )}
-              </div>
-
-              {/* Pagination */}
-              {data?.totalPages > 1 && (
-                <div className="mt-12 flex justify-center items-center gap-4">
-                  <button 
-                    disabled={page === 1}
-                    onClick={() => setPage(p => p - 1)}
-                    className="w-12 h-12 border-2 border-slate-200 rounded-xl flex items-center justify-center font-black disabled:opacity-30 hover:bg-white transition-all shadow-[4px_4px_0px_0px_rgba(226,232,240,1)] active:shadow-none"
-                  >
-                    ←
-                  </button>
-                  <span className="text-sm font-black text-primary-navy px-4">
-                    {page} <span className="text-slate-300 mx-1">/</span> {data.totalPages}
-                  </span>
-                  <button 
-                    disabled={page === data.totalPages}
-                    onClick={() => setPage(p => p + 1)}
-                    className="w-12 h-12 border-2 border-slate-200 rounded-xl flex items-center justify-center font-black disabled:opacity-30 hover:bg-white transition-all shadow-[4px_4px_0px_0px_rgba(226,232,240,1)] active:shadow-none"
-                  >
-                    →
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </section>
-      </main>
+            <Pagination
+              currentPage={page}
+              totalPages={data.totalPages}
+              onPageChange={setPage}
+            />
+          </>
+        ) : (
+          <EmptyState
+            icon="search"
+            title="No results found"
+            message="We couldn't find anything matching your filters. Try widening your scope."
+            actionLabel="Clear all filters"
+            onAction={clearFilters}
+          />
+        )}
+      </div>
     </div>
   );
 }
 
-function FilterChip({ label, active, onClick }) {
+function FilterSection({ label, items, selected, onToggle }) {
   return (
-    <button 
-      onClick={onClick}
-      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border-2 ${
-        active 
-          ? 'bg-accent-amber border-accent-amber text-primary-navy' 
-          : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300'
-      }`}
-    >
-      {label}
-    </button>
+    <div className="space-y-3">
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        {items.map(item => (
+          <button
+            key={item}
+            onClick={() => onToggle(item)}
+            className={`
+              px-4 py-2 rounded-xl text-xs font-black transition-all border-2
+              ${selected.includes(item)
+                ? 'bg-primary-navy border-primary-navy text-white shadow-md'
+                : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300'}
+            `}
+          >
+            {item}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
-
-export default ExplorePage;

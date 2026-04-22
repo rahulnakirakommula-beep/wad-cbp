@@ -1,185 +1,203 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../context/AuthContext';
-import FeedSection from '../components/FeedSection';
-import ListingCard from '../components/ListingCard';
-import { Loader2, PlusCircle, BookmarkCheck, XCircle } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { api } from '../context/AuthContext'
+import { PlusCircle, BookmarkCheck, XCircle, Sparkles, Clock, Flame, RefreshCw } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
-function FeedPage() {
-  const queryClient = useQueryClient();
+// UI Components
+import FeedSection from '../components/FeedSection'
+import ListingCard from '../components/ui/ListingCard'
+import Skeleton from '../components/ui/Skeleton'
+import EmptyState from '../components/ui/EmptyState'
+import Button from '../components/ui/Button'
+import { useToast } from '../context/ToastContext'
 
-  // Fetch Feed Sections
-  const { data, isLoading, isError } = useQuery({
+export default function FeedPage() {
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const { addToast } = useToast()
+
+  // Fetch Feed Data
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['feed'],
     queryFn: async () => {
-      const { data } = await api.get('/feed/sections');
-      return data;
+      const { data } = await api.get('/feed/sections')
+      return data
     }
-  });
+  })
 
-  // Fetch Summary
+  // Fetch Summary Metrics
   const { data: summary } = useQuery({
     queryKey: ['activitySummary'],
     queryFn: async () => {
-      const { data } = await api.get('/activity/summary');
-      return data;
+      const { data } = await api.get('/activity/summary')
+      return data
     }
-  });
+  })
 
-  // Mutation for Save/Ignore
+  // Mutations
   const interactionMutation = useMutation({
     mutationFn: async ({ listingId, status }) => {
-      return api.post('/activity', { listingId, status });
+      return api.post('/activity', { listingId, status })
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['feed'] });
-      queryClient.invalidateQueries({ queryKey: ['activitySummary'] });
+      queryClient.invalidateQueries({ queryKey: ['feed'] })
+      queryClient.invalidateQueries({ queryKey: ['activitySummary'] })
     }
-  });
+  })
 
-  // Flag Mutation
-  const flagMutation = useMutation({
-    mutationFn: async ({ listingId, issueType, proposedFix }) => {
-      return api.post(`/listings/${listingId}/flag`, { issueType, proposedFix });
-    },
-    onSuccess: () => {
-      alert('Thanks! Admin will review this shortly.');
-    }
-  });
-
-  const handleSave = (listingId) => {
-    interactionMutation.mutate({ listingId, status: 'saved' });
-  };
-
-  const handleIgnore = (listingId) => {
-    interactionMutation.mutate({ listingId, status: 'ignored' });
-  };
-
-  const handleFlag = (listingId) => {
-    const fix = prompt('What is wrong with this listing? (Optional)');
-    if (fix !== null) {
-      flagMutation.mutate({ listingId, issueType: 'other', proposedFix: fix });
-    }
-  };
+  const handleSave = (listingId) => interactionMutation.mutate({ listingId, status: 'saved' })
+  const handleIgnore = (listingId) => interactionMutation.mutate({ listingId, status: 'ignored' })
+  const handleNavigate = (id) => navigate(`/app/listing/${id}`)
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <Loader2 className="w-12 h-12 text-accent-amber animate-spin mb-4" />
-        <p className="text-slate-500 font-bold">Waking up the server...</p>
+      <div className="space-y-12 animate-pulse">
+        <div className="space-y-4">
+          <Skeleton variant="text" className="w-1/4 h-8" />
+          <Skeleton variant="text" className="w-1/3" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => <Skeleton.Card key={i} />)}
+        </div>
       </div>
-    );
+    )
+  }
+
+  if (isError) {
+    return (
+      <EmptyState
+        title="Offline or Unavailable"
+        message="We couldn't reach the server. Please check your connection."
+        actionLabel="Try Again"
+        onAction={refetch}
+      />
+    )
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-          <div>
-            <h1 className="text-4xl font-black text-primary-navy mb-2 tracking-tight">Your Opportunity Feed</h1>
-            <p className="text-slate-500 font-medium">Verified opportunities tailored for your growth.</p>
-          </div>
-          <button 
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['feed'] })}
-            className="px-6 py-3 bg-white border-2 border-primary-navy rounded-2xl font-bold text-primary-navy hover:bg-slate-50 transition-colors shadow-[4px_4px_0px_0px_rgba(27,42,74,1)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
-          >
-            Refresh Feed
-          </button>
-        </header>
-        
-        {/* Summary Strip */}
-        <div className="flex flex-wrap gap-4 mb-12">
-          <SummaryCard 
-            label="Saved" 
-            count={summary?.saved || 0} 
-            icon={<PlusCircle className="text-blue-500" />} 
-          />
-          <SummaryCard 
-            label="Applied" 
-            count={summary?.applied || 0} 
-            icon={<BookmarkCheck className="text-green-500" />} 
-          />
-          <SummaryCard 
-            label="Missed" 
-            count={summary?.missed || 0} 
-            icon={<XCircle className="text-red-400" />} 
-          />
+    <div className="space-y-12 pb-20">
+      {/* Page Header */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
+        <div className="space-y-1">
+          <h1 className="text-3xl sm:text-4xl font-black text-primary-navy tracking-tight">Your Feed</h1>
+          <p className="text-slate-500 font-medium italic">Hand-picked opportunities for your next big jump.</p>
         </div>
-
-        {/* Closing Soon */}
-        {data?.closingSoon?.length > 0 && (
-          <FeedSection 
-            title="Closing Soon" 
-            subtitle="Apply before these opportunities disappear"
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="secondary" 
+            onClick={() => refetch()} 
+            iconLeading={RefreshCw}
           >
-            {data.closingSoon.map(listing => (
-              <ListingCard 
-                key={listing._id} 
-                listing={listing} 
-                onSave={handleSave} 
-                onIgnore={handleIgnore} 
-              />
-            ))}
-          </FeedSection>
-        )}
+            Refresh
+          </Button>
+        </div>
+      </header>
 
-        {/* Recommended */}
-        <FeedSection 
-          title="Recommended for You" 
-          subtitle="Based on your branch, year, and interests"
-          viewAllPath="/app/explore"
-        >
-          {data?.recommended?.map(listing => (
+      {/* Metric Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <MetricCard 
+          label="Interests Saved" 
+          value={summary?.saved || 0} 
+          icon={PlusCircle} 
+          color="text-blue-500" 
+          bg="bg-blue-50"
+        />
+        <MetricCard 
+          label="Applied Tasks" 
+          value={summary?.applied || 0} 
+          icon={BookmarkCheck} 
+          color="text-emerald-500" 
+          bg="bg-emerald-50"
+        />
+        <MetricCard 
+          label="Cycles Missed" 
+          value={summary?.missed || 0} 
+          icon={XCircle} 
+          color="text-red-400" 
+          bg="bg-red-50"
+        />
+      </div>
+
+      {/* Recommended Section */}
+      <FeedSection 
+        title="Recommended For You" 
+        subtitle="Based on academic branch and interests" 
+        icon={Sparkles}
+        viewAllPath="/app/explore"
+      >
+        {data?.recommended?.length > 0 ? (
+          data.recommended.map(listing => (
             <ListingCard 
-              key={listing._id} 
+              key={listing._id || listing.id} 
               listing={listing} 
               onSave={handleSave} 
-              onIgnore={handleIgnore} 
+              onIgnore={handleIgnore}
+              onNavigate={handleNavigate}
+            />
+          ))
+        ) : (
+          <div className="col-span-full">
+            <EmptyState 
+              title="Tailor your feed"
+              message="Set your interests to get personalized recommendations."
+              actionLabel="Update Interests"
+              onAction={() => addToast({ title: 'Navigation', message: 'Redirecting to settings...', type: 'info' })}
+            />
+          </div>
+        )}
+      </FeedSection>
+
+      {/* Closing Soon Section */}
+      {data?.closingSoon?.length > 0 && (
+        <FeedSection 
+          title="Closing Soon" 
+          subtitle="Opportunities ending in within 7 days" 
+          icon={Clock}
+        >
+          {data.closingSoon.map(listing => (
+            <ListingCard 
+              key={listing._id || listing.id} 
+              listing={listing} 
+              onSave={handleSave} 
+              onIgnore={handleIgnore}
+              onNavigate={handleNavigate}
             />
           ))}
-          {data?.recommended?.length === 0 && (
-            <div className="col-span-full p-12 bg-white border-2 border-dashed border-slate-200 rounded-3xl text-center">
-              <p className="text-slate-400 font-medium">No custom recommendations yet. Try updating your profile!</p>
-            </div>
-          )}
         </FeedSection>
+      )}
 
-        {/* Don't Miss */}
-        {data?.dontMiss?.length > 0 && (
-          <FeedSection 
-            title="Don't Miss" 
-            subtitle="High-impact opportunities curated by experts"
-          >
-            {data.dontMiss.map(listing => (
-              <ListingCard 
-                key={listing._id} 
-                listing={listing} 
-                onSave={handleSave} 
-                onIgnore={handleIgnore} 
-                onFlag={handleFlag}
-              />
-            ))}
-          </FeedSection>
-        )}
-
-      </main>
+      {/* Don't Miss Section */}
+      {data?.dontMiss?.length > 0 && (
+        <FeedSection 
+          title="Don't Miss" 
+          subtitle="High-impact opportunities with verified quality" 
+          icon={Flame}
+        >
+          {data.dontMiss.map(listing => (
+            <ListingCard 
+              key={listing._id || listing.id} 
+              listing={listing} 
+              onSave={handleSave} 
+              onIgnore={handleIgnore}
+              onNavigate={handleNavigate}
+            />
+          ))}
+        </FeedSection>
+      )}
     </div>
-  );
+  )
 }
 
-function SummaryCard({ label, count, icon }) {
+function MetricCard({ label, value, icon: Icon, color, bg }) {
   return (
-    <div className="bg-white border-2 border-slate-100 rounded-2xl px-6 py-4 flex items-center gap-4 min-w-[160px]">
-      <div className="p-2 bg-slate-50 rounded-xl">
-        {icon}
+    <div className="bg-white border-2 border-slate-100 rounded-2xl p-5 flex items-center gap-5 group transition-all hover:bg-slate-50">
+      <div className={`p-3 ${bg} rounded-xl group-hover:scale-110 transition-transform`}>
+        <Icon className={color} size={24} />
       </div>
       <div>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">{label}</p>
-        <p className="text-2xl font-black text-primary-navy leading-none">{count}</p>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+        <p className="text-3xl font-black text-primary-navy leading-none tracking-tighter">{value}</p>
       </div>
     </div>
-  );
+  )
 }
-
-export default FeedPage;

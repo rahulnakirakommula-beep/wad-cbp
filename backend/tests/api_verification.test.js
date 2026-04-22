@@ -33,8 +33,14 @@ describe('COA Phase 4 Verification Tests', () => {
     
     expect(res.statusCode).toEqual(201);
     expect(res.body).toHaveProperty('token');
-    token = res.body.token;
     userId = res.body._id;
+
+    // Manual Verification for test flow
+    const user = await User.findById(userId);
+    const vToken = user.verificationToken;
+    
+    const verifyRes = await request(app).get(`/api/auth/verify/${vToken}`);
+    expect(verifyRes.statusCode).toEqual(200);
   });
 
   test('Auth: Login the new student', async () => {

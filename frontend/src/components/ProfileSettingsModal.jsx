@@ -1,151 +1,130 @@
 import { useState } from 'react';
 import { useAuth, api } from '../context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
-import { X, Check, Save, User as UserIcon } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { BRANCHES, TAGS } from '../constants';
+import Modal from './ui/Modal';
+import Input from './ui/Input';
+import Select from './ui/Select';
+import Button from './ui/Button';
+import TagPicker from './ui/TagPicker';
+import { useToast } from '../context/ToastContext';
 
-function ProfileSettingsModal({ isOpen, onClose }) {
+export default function ProfileSettingsModal({ isOpen, onClose }) {
   const { user, updateOnboarding } = useAuth();
+  const { addToast } = useToast();
   const queryClient = useQueryClient();
+  
   const [formData, setFormData] = useState({
     branch: user?.profile?.branch || 'CSE',
     currentYear: user?.profile?.currentYear || 1,
     interests: user?.interests || []
   });
+  
   const [isSaving, setIsSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
-  const handleInterestToggle = (tagId) => {
-    setFormData(prev => ({
-      ...prev,
-      interests: prev.interests.includes(tagId)
-        ? prev.interests.filter(id => id !== tagId)
-        : prev.interests.length < 8 ? [...prev.interests, tagId] : prev.interests
-    }));
+  const branchOptions = BRANCHES.map(b => ({ label: b, value: b }));
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setIsDirty(true);
   };
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const { data } = await api.put('/user/preferences', formData);
-      updateOnboarding(data); // Using existing update function to sync context
+      updateOnboarding(data); 
       queryClient.invalidateQueries({ queryKey: ['feed'] });
       queryClient.invalidateQueries({ queryKey: ['explore'] });
+      
+      addToast({
+        title: 'Settings Saved',
+        message: 'Your academic profile and interests have been updated.',
+        type: 'success'
+      });
+      
+      setIsDirty(false);
       onClose();
     } catch (error) {
       console.error('Failed to update preferences', error);
-      alert('Error saving settings. Please try again.');
+      addToast({
+        title: 'Error Saving',
+        message: 'Could not update preferences. Please check your connection.',
+        type: 'error'
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-xl bg-white border-2 border-primary-navy rounded-[2.5rem] shadow-[12px_12px_0px_0px_rgba(27,42,74,1)] overflow-hidden flex flex-col max-h-[90vh]">
-        
-        {/* Header */}
-        <div className="p-8 border-b-2 border-slate-100 flex items-center justify-between bg-slate-50">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-accent-amber rounded-2xl flex items-center justify-center border-2 border-primary-navy shadow-[4px_4px_0px_0px_rgba(27,42,74,1)]">
-              <UserIcon className="text-primary-navy" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-black text-primary-navy tracking-tight">Profile Settings</h2>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Update your academic focus</p>
-            </div>
-          </div>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-slate-200 rounded-xl transition-colors"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Profile Settings"
+      isDirty={isDirty}
+      footer={
+        <div className="flex gap-3">
+          <Button variant="ghost" onClick={onClose} disabled={isSaving}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSave} 
+            loading={isSaving} 
+            iconLeading={Save}
           >
-            <X size={24} className="text-slate-400" />
-          </button>
+            Save Changes
+          </Button>
         </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+      }
+    >
+      <div className="space-y-10">
+        {/* Academic Section */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-accent-amber rounded-full shadow-[0_0_8px_rgba(230,168,23,0.5)]" />
+            <h3 className="text-sm font-black text-primary-navy uppercase tracking-widest">Academic Track</h3>
+          </div>
           
-          {/* Section: Academic */}
-          <div className="space-y-6">
-             <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-accent-amber rounded-full" />
-                <h3 className="text-lg font-black text-primary-navy">Academic Track</h3>
-             </div>
-             
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-black text-slate-400 uppercase mb-2">Branch / Major</label>
-                  <select 
-                    value={formData.branch}
-                    onChange={e => setFormData({...formData, branch: e.target.value})}
-                    className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-primary-navy focus:border-accent-amber outline-none transition-all appearance-none"
-                  >
-                    {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
-                </div>
-                <div>
-                    <label className="block text-xs font-black text-slate-400 uppercase mb-2">Current Year ({formData.currentYear})</label>
-                    <input 
-                        type="range" min="1" max="6" step="1"
-                        value={formData.currentYear}
-                        onChange={e => setFormData({...formData, currentYear: parseInt(e.target.value)})}
-                        className="w-full h-3 bg-slate-100 rounded-full appearance-none cursor-pointer accent-primary-navy mt-4"
-                    />
-                </div>
-             </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Select
+              label="Branch / Major"
+              options={branchOptions}
+              value={formData.branch}
+              onChange={(val) => handleChange('branch', val)}
+              searchable
+            />
+            
+            <Input
+              label="Current Year"
+              type="number"
+              min="1"
+              max="6"
+              value={formData.currentYear}
+              onChange={(e) => handleChange('currentYear', parseInt(e.target.value))}
+              helperText="Year of study (1-6)"
+            />
           </div>
+        </section>
 
-          {/* Section: Interests */}
-          <div className="space-y-6">
-             <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-accent-amber rounded-full" />
-                <h3 className="text-lg font-black text-primary-navy">Interests ({formData.interests.length}/8)</h3>
-             </div>
-             
-             <div className="flex flex-wrap gap-2">
-                {TAGS.map(tag => (
-                  <button
-                    key={tag.id}
-                    onClick={() => handleInterestToggle(tag.id)}
-                    className={`px-5 py-2.5 rounded-2xl border-2 font-black text-sm transition-all flex items-center gap-2 ${
-                      formData.interests.includes(tag.id)
-                        ? 'bg-primary-navy text-white border-primary-navy shadow-[4px_4px_0px_0px_rgba(230,168,23,1)]'
-                        : 'bg-white text-slate-600 border-slate-100 hover:border-slate-300'
-                    }`}
-                  >
-                    {formData.interests.includes(tag.id) && <Check size={14} className="text-accent-amber" />}
-                    {tag.name}
-                  </button>
-                ))}
-             </div>
+        {/* Interests Section */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-accent-amber rounded-full shadow-[0_0_8px_rgba(230,168,23,0.5)]" />
+            <h3 className="text-sm font-black text-primary-navy uppercase tracking-widest">Interests & Focus</h3>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="p-8 border-t-2 border-slate-50 bg-white flex justify-end gap-4">
-           <button 
-             onClick={onClose}
-             className="px-8 py-4 font-black text-slate-400 hover:text-primary-navy transition-colors"
-           >
-             Cancel
-           </button>
-           <button 
-             onClick={handleSave}
-             disabled={isSaving}
-             className="px-10 py-4 bg-primary-navy text-white font-black rounded-[1.25rem] shadow-[6px_6px_0px_0px_rgba(230,168,23,1)] hover:translate-y-px transition-all flex items-center gap-3 active:shadow-none disabled:opacity-50"
-           >
-             {isSaving ? (
-               <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving...</>
-             ) : (
-               <><Save size={20} /> Save Changes</>
-             )}
-           </button>
-        </div>
+          
+          <TagPicker
+            tags={TAGS}
+            selectedTags={formData.interests}
+            onChange={(val) => handleChange('interests', val)}
+            max={8}
+            // Tags don't have categories yet in constants.js, but TagPicker handles it
+          />
+        </section>
       </div>
-    </div>
+    </Modal>
   );
 }
-
-export default ProfileSettingsModal;

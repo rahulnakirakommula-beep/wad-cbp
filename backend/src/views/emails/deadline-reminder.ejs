@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #1b2a4a; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 2px solid #f1f5f9; border-radius: 20px; }
+    .header { background: #1b2a4a; color: white; padding: 30px; border-radius: 16px; text-align: center; }
+    .footer { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 30px; }
+    .button { display: inline-block; padding: 12px 24px; background: #e6a817; color: #1b2a4a; font-weight: bold; text-decoration: none; border-radius: 12px; margin-top: 20px; }
+    .accent { color: #e6a817; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>COA<span class="accent">.</span></h1>
+      <p>Upcoming Deadline Alert</p>
+    </div>
+    <div style="padding: 20px;">
+      <p>Hi <strong><%= name %></strong>,</p>
+      <p>This is a quick reminder that an opportunity you saved is closing soon:</p>
+      
+      <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 2px solid #e2e8f0; margin: 20px 0;">
+        <h3 style="margin: 0;"><%= listingTitle %></h3>
+        <p style="margin: 5px 0; color: #64748b;"><%= orgName %></p>
+        <p style="margin: 10px 0; font-weight: bold; color: #ef4444;">Deadline: <%= deadline %></p>
+      </div>
+
+      <p>Don't miss out on this one! Click below to view the details and apply.</p>
+      
+      <a href="<%= actionUrl %>" class="button">View Opportunity</a>
+    </div>
+    <div class="footer">
+      <p>Campus Opportunity Aggregator &copy; 2026</p>
+      <p>If you wish to stop receiving these alerts, you can manage your preferences in your profile settings.</p>
+    </div>
+  </div>
+</body>
+</html>

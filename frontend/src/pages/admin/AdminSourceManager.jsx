@@ -1,13 +1,32 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../context/AuthContext';
-import { Loader2, ShieldCheck, Globe, ArrowLeft, MoreHorizontal } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { 
+  ShieldCheck, 
+  Globe, 
+  ChevronLeft, 
+  Plus, 
+  ToggleRight as ToggleIcon,
+  Search,
+  MoreVertical,
+  Shield,
+  CheckCircle2,
+  XCircle
+} from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 
-function AdminSourceManager() {
+// UI Components
+import AdminDataTable from '../../components/ui/AdminDataTable';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
+import Toggle from '../../components/ui/Toggle';
+import { useToast } from '../../context/ToastContext';
+
+export default function AdminSourceManager() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { addToast } = useToast();
 
-  // Fetch Sources
-  const { data: sources, isLoading } = useQuery({
+  const { data: sources = [], isLoading } = useQuery({
     queryKey: ['adminSources'],
     queryFn: async () => {
       const { data } = await api.get('/admin/sources');
@@ -15,100 +34,128 @@ function AdminSourceManager() {
     }
   });
 
-  // Verify Source Mutation
   const verifyMutation = useMutation({
-    mutationFn: async ({ id, level }) => {
-      return api.put(`/admin/sources/${id}/verify`, { verificationLevel: level });
-    },
-    onSuccess: () => {
+    mutationFn: ({ id, level }) => api.put(`/admin/sources/${id}/verify`, { verificationLevel: level }),
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['adminSources'] });
+      addToast({
+        title: 'Level Updated',
+        message: `Source level set to ${vars.level}.`,
+        type: 'success'
+      });
     }
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <Loader2 className="w-12 h-12 text-primary-navy animate-spin" />
-      </div>
-    );
-  }
+  const deactivateMutation = useMutation({
+    mutationFn: ({ id, active }) => api.put(`/admin/sources/${id}`, { isActive: active }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['adminSources'] });
+      addToast({
+        title: vars.active ? 'Source Activated' : 'Source Deactivated',
+        message: 'Student submissions will be adjusted accordingly.',
+        type: 'info'
+      });
+    }
+  });
+
+  const tableColumns = [
+    { 
+      key: 'name', 
+      label: 'Organisation', 
+      render: (name, row) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center text-primary-navy">
+            {row.sourceType === 'scraper' ? <Globe size={18} /> : <Shield size={18} />}
+          </div>
+          <div className="flex flex-col">
+            <span className="font-black text-primary-navy">{name}</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{row.sourceType}</span>
+          </div>
+        </div>
+      )
+    },
+    { 
+      key: 'verificationLevel', 
+      label: 'Verification', 
+      render: (level) => <Badge variant={level === 'unverified' ? 'unverified' : level}>{level}</Badge>
+    },
+    { 
+      key: 'listingCount', 
+      label: 'Listings', 
+      render: (count) => <span className="text-xs font-black text-slate-500">{count || 0}</span>
+    },
+    { 
+      key: 'isActive', 
+      label: 'Status', 
+      render: (active, row) => (
+        <div className="flex items-center gap-2">
+           <Toggle 
+              checked={active} 
+              onChange={() => deactivateMutation.mutate({ id: row._id, active: !active })} 
+            />
+           <span className={`text-[10px] font-black uppercase tracking-widest ${active ? 'text-emerald-500' : 'text-slate-300'}`}>
+             {active ? 'Active' : 'Inactive'}
+           </span>
+        </div>
+      )
+    }
+  ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        <header className="mb-12">
-          <Link to="/admin" className="text-sm font-bold text-accent-amber hover:underline flex items-center gap-2 mb-4">
-            <ArrowLeft size={16} /> Back to Dashboard
+    <div className="space-y-10 pb-20">
+      <header className="px-1 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
+        <div className="space-y-1">
+          <Link to="/admin" className="text-xs font-black text-slate-400 hover:text-primary-navy transition-colors flex items-center gap-1 uppercase tracking-widest mb-2">
+            <ChevronLeft size={14} /> Back to Hub
           </Link>
-          <h1 className="text-4xl font-black text-primary-navy tracking-tight">Source Verification</h1>
-          <p className="text-slate-500 font-medium mt-2">Manage external scrapers and manual listing providers.</p>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sources?.map(source => (
-            <div key={source._id} className="bg-white border-2 border-slate-100 rounded-[2rem] p-6 shadow-sm hover:border-primary-navy transition-colors group">
-              <div className="flex items-center justify-between mb-6">
-                <div className="h-14 w-14 bg-slate-50 border-2 border-slate-100 rounded-2xl flex items-center justify-center text-primary-navy group-hover:bg-primary-navy group-hover:text-white transition-colors">
-                  {source.sourceType === 'scraper' ? <Globe size={28} /> : <ShieldCheck size={28} />}
-                </div>
-                <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${getLevelColor(source.verificationLevel)}`}>
-                  {source.verificationLevel}
-                </span>
-              </div>
-
-              <h3 className="text-xl font-black text-primary-navy mb-1">{source.name}</h3>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">{source.sourceType}</p>
-
-              <div className="space-y-3 pt-6 border-t-2 border-slate-50">
-                <p className="text-xs font-black text-slate-300 uppercase tracking-widest mb-2">Set Verification Level</p>
-                <div className="flex flex-wrap gap-2">
-                  <LevelButton 
-                    label="Official" 
-                    active={source.verificationLevel === 'official'} 
-                    onClick={() => verifyMutation.mutate({ id: source._id, level: 'official' })}
-                  />
-                  <LevelButton 
-                    label="Verified" 
-                    active={source.verificationLevel === 'verified'} 
-                    onClick={() => verifyMutation.mutate({ id: source._id, level: 'verified' })}
-                  />
-                  <LevelButton 
-                    label="Student" 
-                    active={source.verificationLevel === 'student'} 
-                    onClick={() => verifyMutation.mutate({ id: source._id, level: 'student' })}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
+          <h1 className="text-3xl sm:text-4xl font-black text-primary-navy tracking-tight">Source Hub</h1>
+          <p className="text-slate-500 font-medium italic">Manage organisation authority and data intake partners.</p>
         </div>
-      </main>
+        
+        <Button 
+          variant="primary" 
+          iconLeading={Plus} 
+          onClick={() => {}}
+        >
+          Add Organisation
+        </Button>
+      </header>
+
+      <div className="relative">
+         <AdminDataTable 
+            columns={tableColumns} 
+            data={sources} 
+            loading={isLoading}
+            actions={[
+              { 
+                icon: ShieldCheck, 
+                label: 'Verify (Official)', 
+                onClick: (row) => verifyMutation.mutate({ id: row._id, level: 'official' }) 
+              },
+              { 
+                icon: CheckCircle2, 
+                label: 'Verify (Verified)', 
+                onClick: (row) => verifyMutation.mutate({ id: row._id, level: 'verified' }) 
+              },
+              { 
+                icon: XCircle, 
+                label: 'Strip Verification', 
+                variant: 'danger', 
+                onClick: (row) => verifyMutation.mutate({ id: row._id, level: 'unverified' }) 
+              }
+            ]}
+          />
+      </div>
+
+      <section className="p-10 bg-primary-navy rounded-[2.5rem] text-white shadow-xl shadow-blue-900/20">
+        <div className="max-w-2xl space-y-4">
+          <h3 className="text-xl font-black tracking-tight">Intake Intelligence</h3>
+          <p className="text-sm font-medium text-white/60 leading-relaxed italic">
+            Listings curated from Official sources skip the "Pending" audit queue and are automatically flagged as Curated. 
+            Deactivating a source prevents students from creating manual listings under that organization but does not hide existing data.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }
-
-function LevelButton({ label, active, onClick }) {
-  return (
-    <button 
-      onClick={onClick}
-      className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest border-2 transition-all ${
-        active 
-          ? 'bg-primary-navy border-primary-navy text-white' 
-          : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
-function getLevelColor(level) {
-  switch (level) {
-    case 'official': return 'bg-blue-100 text-blue-700';
-    case 'verified': return 'bg-green-100 text-green-700';
-    case 'unverified': return 'bg-red-100 text-red-700';
-    default: return 'bg-slate-100 text-slate-700';
-  }
-}
-
-export default AdminSourceManager;

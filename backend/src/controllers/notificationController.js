@@ -6,19 +6,14 @@ const Notification = require('../models/Notification');
 // @access  Private
 const getNotifications = asyncHandler(async (req, res) => {
   const { page = 1, limit = 20 } = req.query;
+  const skip = (page - 1) * limit;
 
-  const count = await Notification.countDocuments({ userId: req.user._id });
   const notifications = await Notification.find({ userId: req.user._id })
     .sort({ createdAt: -1 })
     .limit(limit * 1)
-    .skip((page - 1) * limit)
-    .exec();
-
-  res.json({
-    notifications,
-    totalPages: Math.ceil(count / limit),
-    currentPage: page
-  });
+    .skip(skip);
+  
+  res.json(notifications);
 });
 
 // @desc    Get unread notification count
@@ -29,26 +24,30 @@ const getUnreadCount = asyncHandler(async (req, res) => {
     userId: req.user._id, 
     status: 'unread' 
   });
+  
   res.json({ count });
 });
 
-// @desc    Mark notification as read
+// @desc    Mark a notification as read
 // @route   PUT /api/notifications/:id/read
 // @access  Private
 const markAsRead = asyncHandler(async (req, res) => {
-  const notification = await Notification.findOne({ 
-    _id: req.params.id, 
-    userId: req.user._id 
-  });
+  const notification = await Notification.findById(req.params.id);
 
-  if (notification) {
-    notification.status = 'read';
-    await notification.save();
-    res.json({ message: 'Marked as read' });
-  } else {
+  if (!notification) {
     res.status(404);
     throw new Error('Notification not found');
   }
+
+  if (notification.userId.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error('Not authorized');
+  }
+
+  notification.status = 'read';
+  await notification.save();
+
+  res.json({ message: 'Notification marked as read' });
 });
 
 // @desc    Mark all notifications as read
@@ -59,7 +58,8 @@ const markAllRead = asyncHandler(async (req, res) => {
     { userId: req.user._id, status: 'unread' },
     { status: 'read' }
   );
-  res.json({ message: 'All marked as read' });
+
+  res.json({ message: 'All notifications marked as read' });
 });
 
 module.exports = {

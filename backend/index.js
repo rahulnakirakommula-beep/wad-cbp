@@ -2,15 +2,26 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./src/config/db');
+const { initCronJobs } = require('./src/services/cronService');
+const { apiLimiter } = require('./src/middleware/rateLimitMiddleware');
+const { errorHandler, notFound } = require('./src/middleware/errorMiddleware');
 
 // Connect Database
-connectDB();
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();
+}
+
+// Initialize Cron Jobs
+if (process.env.NODE_ENV !== 'test') {
+  initCronJobs();
+}
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/api', apiLimiter); // Apply global rate limit to all /api routes
 
 // Basic Route
 app.get('/', (req, res) => res.send('COA API is running...'));
@@ -22,7 +33,14 @@ app.use('/api/feed', require('./src/routes/feedRoutes'));
 app.use('/api/listings', require('./src/routes/listingRoutes'));
 app.use('/api/activity', require('./src/routes/activityRoutes'));
 app.use('/api/notifications', require('./src/routes/notificationRoutes'));
+app.use('/api/tags', require('./src/routes/tagRoutes'));
+app.use('/api/guides', require('./src/routes/guideRoutes'));
 app.use('/api/admin', require('./src/routes/adminRoutes'));
+app.use('/api/org', require('./src/routes/organisationRoutes'));
+
+// Error Handling
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
