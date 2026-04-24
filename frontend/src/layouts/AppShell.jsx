@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ShortcutsHelpModal from '../components/ShortcutsHelpModal';
 
 /**
  * AppShell is the root wrapper as specified in Section 2.1.
@@ -9,39 +10,50 @@ import { useAuth } from '../context/AuthContext';
 export default function AppShell({ children }) {
   const { user } = useAuth();
   const location = useLocation();
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
 
   useEffect(() => {
     const handleGlobalShortcuts = (e) => {
+      // Ignore shortcuts if user is typing in form fields
+      const isTyping = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+      
       // Escape for closing modals/drawers
       if (e.key === 'Escape') {
-        // This will be handled by the Modal component or global state
-        // For now we just log it as a hook
-        console.debug('[AppShell] Global Escape detected');
+        if (isShortcutsModalOpen) {
+          setIsShortcutsModalOpen(false);
+        }
       }
 
+      if (isTyping) return;
+
       // '?' for keyboard help
-      if (e.key === '?' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-        console.debug('[AppShell] Opening focus help modal');
-        // TODO: Implement shortcuts help modal
+      if (e.key === '?') {
+        setIsShortcutsModalOpen(true);
+      }
+
+      // '/' for search focus
+      if (e.key === '/') {
+        e.preventDefault();
+        // Look for the first visible search input or text input
+        const searchInput = document.querySelector('input[type="text"], input[type="search"]');
+        if (searchInput) {
+          searchInput.focus();
+        }
       }
     };
 
     window.addEventListener('keydown', handleGlobalShortcuts);
     return () => window.removeEventListener('keydown', handleGlobalShortcuts);
-  }, []);
-
-  // Check if we are in app, admin or public routes
-  const isAdmin = location.pathname.startsWith('/admin');
-  const isApp = location.pathname.startsWith('/app');
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
+  }, [isShortcutsModalOpen]);
 
   return (
     <div id="app-root" className="min-h-screen bg-slate-50 font-sans selection:bg-amber-100 selection:text-amber-900">
-      {/* 
-        This is where we could conditionally render the top-level 
-        Navbar or Sidebar if needed globally.
-      */}
       <main className="relative">{children}</main>
+      
+      <ShortcutsHelpModal 
+        isOpen={isShortcutsModalOpen} 
+        onClose={() => setIsShortcutsModalOpen(false)} 
+      />
     </div>
   );
 }

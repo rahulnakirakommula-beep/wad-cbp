@@ -55,8 +55,15 @@ export default function DashboardPage() {
       queryClient.invalidateQueries({ queryKey: ['activitySummary'] });
       addToast({
         title: 'Updated',
-        message: `Activity marked as ${variables.status}.`,
+        body: `Activity marked as ${variables.status}.`,
         type: 'success'
+      });
+    },
+    onError: (error) => {
+      addToast({
+        title: 'Update failed',
+        body: error.response?.data?.message || 'We could not update your roadmap at this time.',
+        type: 'error'
       });
     }
   });

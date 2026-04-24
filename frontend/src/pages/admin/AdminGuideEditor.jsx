@@ -56,7 +56,7 @@ export default function AdminGuideEditor() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminGuides'] });
-      addToast({ title: 'Guide Saved', message: 'Content has been synchronized.', type: 'success' });
+      addToast({ title: 'Guide Saved', body: 'Content has been synchronized.', type: 'success' });
       setIsDirty(false);
       if (isNew) navigate('/admin/guides');
     }

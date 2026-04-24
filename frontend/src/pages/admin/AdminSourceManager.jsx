@@ -40,7 +40,7 @@ export default function AdminSourceManager() {
       queryClient.invalidateQueries({ queryKey: ['adminSources'] });
       addToast({
         title: 'Level Updated',
-        message: `Source level set to ${vars.level}.`,
+        body: `Source level set to ${vars.level}.`,
         type: 'success'
       });
     }
@@ -52,7 +52,7 @@ export default function AdminSourceManager() {
       queryClient.invalidateQueries({ queryKey: ['adminSources'] });
       addToast({
         title: vars.active ? 'Source Activated' : 'Source Deactivated',
-        message: 'Student submissions will be adjusted accordingly.',
+        body: 'Student submissions will be adjusted accordingly.',
         type: 'info'
       });
     }

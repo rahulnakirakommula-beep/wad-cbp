@@ -41,7 +41,7 @@ export default function ProfileSettingsModal({ isOpen, onClose }) {
       
       addToast({
         title: 'Settings Saved',
-        message: 'Your academic profile and interests have been updated.',
+        body: 'Your academic profile and interests have been updated.',
         type: 'success'
       });
       
@@ -51,7 +51,7 @@ export default function ProfileSettingsModal({ isOpen, onClose }) {
       console.error('Failed to update preferences', error);
       addToast({
         title: 'Error Saving',
-        message: 'Could not update preferences. Please check your connection.',
+        body: 'Could not update preferences. Please check your connection.',
         type: 'error'
       });
     } finally {

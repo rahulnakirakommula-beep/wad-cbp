@@ -1,27 +1,42 @@
-import { 
-  Clock, 
-  Flame, 
-  Calendar, 
-  CheckCircle2, 
-  AlertCircle,
+import {
   Bell,
-  Trash2
+  Calendar,
+  ChevronRight,
+  Clock,
+  Flame,
+  XCircle
 } from 'lucide-react';
 
-export default function NotificationItem({ notification, onClick, onRemove }) {
-  const { type, title, message, read, createdAt } = notification;
+function getRelativeTime(createdAt) {
+  const created = new Date(createdAt);
+  const diffMs = Date.now() - created.getTime();
+  const diffMinutes = Math.max(1, Math.floor(diffMs / 60000));
+
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return created.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+export default function NotificationItem({ notification, onClick }) {
+  const { type, payload = {}, status, createdAt } = notification;
+  const isUnread = status === 'unread';
 
   const getTypeConfig = () => {
     switch (type) {
-      case 'deadline_3day': 
+      case 'deadline_3day':
         return { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' };
-      case 'deadline_1day': 
+      case 'deadline_1day':
         return { icon: Clock, color: 'text-red-500', bg: 'bg-red-50' };
-      case 'dont_miss': 
+      case 'dont_miss':
         return { icon: Flame, color: 'text-orange-500', bg: 'bg-orange-50' };
-      case 'season_open': 
+      case 'season_open':
         return { icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-50' };
-      default: 
+      case 'cancelled':
+        return { icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' };
+      default:
         return { icon: Bell, color: 'text-slate-400', bg: 'bg-slate-50' };
     }
   };
@@ -30,41 +45,35 @@ export default function NotificationItem({ notification, onClick, onRemove }) {
   const Icon = config.icon;
 
   return (
-    <div 
+    <button
+      type="button"
       onClick={onClick}
       className={`
-        group relative flex items-start gap-4 p-5 rounded-[2rem] border-2 transition-all cursor-pointer
-        ${read ? 'bg-white border-slate-50 opacity-70' : 'bg-blue-50/30 border-blue-100 shadow-sm'}
+        group w-full flex items-start gap-4 p-5 rounded-[2rem] border-2 transition-all text-left
+        ${isUnread ? 'bg-blue-50/40 border-blue-100 shadow-sm' : 'bg-white border-slate-100'}
         hover:border-primary-navy hover:bg-white hover:shadow-lg hover:-translate-y-0.5
       `}
     >
-      <div className={`p-3 rounded-2xl ${config.bg} ${config.color} flex-shrink-0 group-hover:scale-110 transition-transform`}>
+      <div className={`p-3 rounded-2xl ${config.bg} ${config.color} flex-shrink-0`}>
         <Icon size={20} />
       </div>
 
-      <div className="flex-1 min-w-0 pr-8">
-        <div className="flex items-center gap-2 mb-1">
-          <h4 className={`text-sm font-black tracking-tight truncate ${read ? 'text-slate-600' : 'text-primary-navy'}`}>
-            {title}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start gap-2 mb-1">
+          <h4 className={`text-sm font-black tracking-tight ${isUnread ? 'text-primary-navy' : 'text-slate-700'}`}>
+            {payload.title}
           </h4>
-          {!read && (
-            <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 animate-pulse" />
-          )}
+          {isUnread && <span className="mt-1.5 w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 animate-pulse" />}
         </div>
-        <p className="text-xs font-bold text-slate-500 leading-relaxed mb-2">
-          {message}
-        </p>
-        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-          {new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </span>
+        <p className="text-sm text-slate-500 leading-relaxed line-clamp-1">{payload.message}</p>
       </div>
 
-      <button 
-        onClick={(e) => { e.stopPropagation(); onRemove(); }}
-        className="absolute top-5 right-5 p-2 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-      >
-        <Trash2 size={16} />
-      </button>
-    </div>
+      <div className="flex items-center gap-3 flex-shrink-0 pl-2">
+        <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+          {getRelativeTime(createdAt)}
+        </span>
+        <ChevronRight size={16} className="text-slate-300 group-hover:text-primary-navy transition-colors" />
+      </div>
+    </button>
   );
 }

@@ -32,14 +32,14 @@ const Input = forwardRef(({
 
   const baseContainerStyles = 'relative w-full group';
   const labelStyles = `
-    absolute left-4 transition-all duration-200 pointer-events-none select-none
-    ${shouldFloat ? '-top-2.5 text-xs font-bold px-1 bg-white' : 'top-3.5 text-sm text-slate-400'}
+    absolute transition-all duration-200 pointer-events-none select-none z-10
+    ${shouldFloat ? '-top-2.5 left-3 text-xs font-bold px-1.5 bg-white' : `top-3.5 ${(IconLeading || isSearch) ? 'left-11' : 'left-4'} text-sm text-slate-400`}
     ${error ? 'text-red-500' : isFocused ? 'text-primary-navy' : 'text-slate-500'}
   `;
 
   const inputStyles = `
     w-full bg-white text-sm text-slate-900 rounded-xl border-2 transition-all duration-200 outline-none
-    ${isTextArea ? 'py-3 min-h-[80px] resize-y' : 'h-12'}
+    ${isTextArea ? 'py-4 min-h-[80px] resize-y' : 'h-12'}
     ${IconLeading ? 'pl-11' : 'pl-4'}
     ${(IconTrailing || isPassword || isSearch || isDate || error || success || loading) ? 'pr-11' : 'pr-4'}
     ${error ? 'border-red-500 focus:border-red-600' : isFocused ? 'border-primary-navy' : 'border-slate-200 hover:border-slate-300'}
@@ -90,13 +90,13 @@ const Input = forwardRef(({
 
   return (
     <div className={baseContainerStyles}>
-      {label && (
-        <label className={labelStyles}>
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
-      )}
-
       <div className="relative">
+        {label && (
+          <label className={labelStyles}>
+            {label} {required && <span className="text-red-500">*</span>}
+          </label>
+        )}
+
         {IconLeading && (
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-navy transition-colors">
             <IconLeading size={18} />

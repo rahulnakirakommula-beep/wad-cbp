@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, forwardRef } from 'react';
+import { useState, useRef, useEffect, forwardRef, useMemo } from 'react';
 import { ChevronDown, Search, Check, X, Loader2 } from 'lucide-react';
 
 const Select = forwardRef(({
@@ -19,6 +19,13 @@ const Select = forwardRef(({
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef(null);
 
+  const normalizedOptions = useMemo(() => {
+    return options.map(opt => {
+      if (typeof opt === 'string') return { label: opt, value: opt };
+      return opt;
+    });
+  }, [options]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
@@ -29,13 +36,13 @@ const Select = forwardRef(({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const filteredOptions = options.filter(opt => 
-    opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredOptions = normalizedOptions.filter(opt => 
+    opt.label?.toString().toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const selectedOptions = multiple 
-    ? options.filter(opt => value?.includes(opt.value))
-    : options.find(opt => opt.value === value);
+    ? normalizedOptions.filter(opt => value?.includes(opt.value))
+    : normalizedOptions.find(opt => opt.value === value);
 
   const handleSelect = (optionValue) => {
     if (multiple) {

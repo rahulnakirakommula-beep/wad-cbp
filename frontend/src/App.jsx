@@ -1,7 +1,5 @@
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
-import { useAuth } from './context/AuthContext'
 import { AnimatePresence, motion } from 'framer-motion'
-import Navbar from './components/Navbar';
 import InstallPWA from './components/InstallPWA';
 
 // Pages
@@ -26,6 +24,7 @@ import SettingsPage from './pages/SettingsPage'
 import OrgDashboard from './pages/OrgDashboard'
 import AdminUserManager from './pages/admin/AdminUserManager'
 import AdminAuditLogs from './pages/admin/AdminAuditLogs'
+import VerifyEmail from './pages/VerifyEmail'
 
 // Layouts & UI
 import AppShell from './layouts/AppShell'
@@ -39,7 +38,7 @@ const PageTransition = ({ children }) => (
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, y: -10 }}
-    transition={{ duration: 0.3, ease: 'easeOut' }}
+    transition={{ duration: 0.15, ease: 'easeOut' }}
     className="w-full"
   >
     {children}
@@ -82,6 +81,7 @@ function App() {
           
           <Route path="/login" element={<div className="max-w-7xl mx-auto px-4 py-16"><PageTransition><LoginPage /></PageTransition></div>} />
           <Route path="/signup" element={<div className="max-w-7xl mx-auto px-4 py-16"><PageTransition><SignupPage /></PageTransition></div>} />
+          <Route path="/verify-email" element={<div className="max-w-7xl mx-auto px-4 py-16"><PageTransition><VerifyEmail /></PageTransition></div>} />
           
           {/* Onboarding */}
           <Route path="/onboarding" element={
@@ -126,6 +126,8 @@ function App() {
                 <Routes>
                   <Route index element={<PageTransition><AdminDashboard /></PageTransition>} />
                   <Route path="listings" element={<PageTransition><AdminListingTable /></PageTransition>} />
+                  <Route path="queue" element={<PageTransition><AdminListingTable /></PageTransition>} />
+                  <Route path="stale" element={<PageTransition><AdminListingTable /></PageTransition>} />
                   <Route path="listings/new" element={<PageTransition><AdminCurationPanel /></PageTransition>} />
                   <Route path="listings/:id" element={<PageTransition><AdminCurationPanel /></PageTransition>} />
                   <Route path="sources" element={<PageTransition><AdminSourceManager /></PageTransition>} />
@@ -142,11 +144,6 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
-
-      <InstallPWA />
-    </AppShell>
-  )
-}
 
       <InstallPWA />
     </AppShell>

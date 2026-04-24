@@ -4,6 +4,8 @@ const UserActivity = require('../models/UserActivity');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { sendEmail } = require('./emailService');
+const { cacheRecommendations } = require('../config/redis');
+const { computeFeedSectionsForUser } = require('../controllers/feedController');
 
 /**
  * Initialize all cron jobs
@@ -52,8 +54,8 @@ const initCronJobs = () => {
     }
   });
 
-  // 2. Every Day at 9:00 AM: Deadline Reminders (FR-JOB-02)
-  cron.schedule('0 9 * * *', async () => {
+  // 2. Every Day at 8:00 AM: Deadline Reminders (FR-JOB-02)
+  cron.schedule('0 8 * * *', async () => {
     console.log('[CRON] Checking for Upcoming Deadline Reminders...');
     try {
       const now = new Date();
@@ -137,13 +139,27 @@ const initCronJobs = () => {
           interests: { $in: listing.domainTags }
         });
 
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
         for (const user of interestedUsers) {
+          // Dedup: exact (userId, listingId, type)
           const exists = await Notification.findOne({
             userId: user._id,
             listingId: listing._id,
             type: 'season_open'
           });
           if (exists) continue;
+
+          // FR-NOT-08: Frequency cap — max 1 season_open per domain-category per user per month
+          // Check if user already got a season_open this month for any listing sharing a domain tag
+          const recentSeason = await Notification.findOne({
+            userId: user._id,
+            type: 'season_open',
+            createdAt: { $gte: startOfMonth }
+          });
+          if (recentSeason) continue;
 
           await Notification.create({
             userId: user._id,
@@ -159,6 +175,26 @@ const initCronJobs = () => {
       }
     } catch (error) {
       console.error('[CRON] Error in Season Window Cron:', error);
+    }
+  });
+
+  // 5. Every 30 Minutes: Feed Pre-computation Cache Warmup (FR-FEED-06)
+  cron.schedule('*/30 * * * *', async () => {
+    console.log('[CRON] Warming recommended feed cache...');
+    try {
+      const users = await User.find({
+        role: 'student',
+        status: 'active',
+        isEmailVerified: true,
+        onboardingComplete: true
+      });
+
+      for (const user of users) {
+        const sections = await computeFeedSectionsForUser(user);
+        await cacheRecommendations(user._id, sections);
+      }
+    } catch (error) {
+      console.error('[CRON] Error in Feed Cache Warmup Cron:', error);
     }
   });
 };
@@ -206,7 +242,7 @@ async function processReminders(listings, type, timeStr, sendEmailNotif) {
             listingTitle: listing.title,
             orgName: listing.orgName,
             deadline: new Date(listing.timeline.deadline).toLocaleDateString(),
-            actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/app/listing/${listing._id}`
+            actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:5174'}/app/listing/${listing._id}`
           }
         });
       }

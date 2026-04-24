@@ -35,7 +35,7 @@ export default function RouteGuard({ children, requiredRole, allowUnonboarded = 
   // 4. Role enforcement
   if (requiredRole && user.role !== requiredRole) {
     // Redirect to the appropriate home for their role
-    const homePath = user.role === 'admin' ? '/admin' : '/app/feed';
+    const homePath = user.role === 'admin' ? '/admin' : user.role === 'source' ? '/org' : '/app/feed';
     // We should show a toast here, but the Toast system is in next step
     return <Navigate to={homePath} replace />;
   }

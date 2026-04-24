@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const UserActivity = require('../models/UserActivity');
+const AuditLog = require('../models/AuditLog');
 
 // @desc    Upsert user activity (save/ignore)
 // @route   POST /api/activity
@@ -24,6 +25,14 @@ const upsertActivity = asyncHandler(async (req, res) => {
     { new: true, upsert: true }
   );
 
+  await AuditLog.create({
+    actorId: req.user._id,
+    actorType: 'user',
+    category: 'listing',
+    action: `activity_${status}`,
+    referenceId: listingId
+  });
+
   res.json(activity);
 });
 
@@ -42,11 +51,24 @@ const updateActivity = asyncHandler(async (req, res) => {
   const activity = await UserActivity.findOne({ userId: req.user._id, listingId });
 
   if (activity) {
+    const oldStatus = activity.status;
     activity.status = status || activity.status;
     if (notes !== undefined) activity.notes = notes;
     activity.statusUpdatedAt = Date.now();
     
     const updatedActivity = await activity.save();
+
+    if (oldStatus !== activity.status) {
+      await AuditLog.create({
+        actorId: req.user._id,
+        actorType: 'user',
+        category: 'listing',
+        action: `activity_status_${activity.status}`,
+        referenceId: listingId,
+        diff: { status: { from: oldStatus, to: activity.status } }
+      });
+    }
+
     res.json(updatedActivity);
   } else {
     res.status(404);

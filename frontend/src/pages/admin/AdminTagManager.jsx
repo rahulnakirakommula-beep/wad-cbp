@@ -38,9 +38,16 @@ export default function AdminTagManager() {
     mutationFn: (data) => api.post('/admin/tags', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminTags'] });
-      addToast({ title: 'Tag Created', message: 'New domain tag added and ready for classification.', type: 'success' });
+      addToast({ title: 'Tag Created', body: 'New domain tag added and ready for classification.', type: 'success' });
       setShowCreate(false);
       setNewTag({ displayName: '', slug: '', category: 'technical' });
+    },
+    onError: (error) => {
+      addToast({
+        title: 'Creation failed',
+        body: error.response?.data?.message || 'We could not create the tag.',
+        type: 'error'
+      });
     }
   });
 
@@ -48,7 +55,14 @@ export default function AdminTagManager() {
     mutationFn: ({ id, replacementId }) => api.post(`/admin/tags/${id}/retire`, { replacementId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminTags'] });
-      addToast({ title: 'Tag Retired', message: 'References migrated and tag deactivated.', type: 'info' });
+      addToast({ title: 'Tag Retired', body: 'References migrated and tag deactivated.', type: 'info' });
+    },
+    onError: (error) => {
+      addToast({
+        title: 'Retirement failed',
+        body: error.response?.data?.message || 'We could not retire the tag.',
+        type: 'error'
+      });
     }
   });
 

@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const crypto = require('crypto');
 const asyncHandler = require('express-async-handler');
 const { sendEmail } = require('../services/emailService');
 
@@ -10,9 +9,8 @@ const { sendEmail } = require('../services/emailService');
 // @access  Public
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
-
-  // Check if user exists
-  const userExists = await User.findOne({ email });
+  const normalizedEmail = email.toLowerCase().trim();
+  const userExists = await User.findOne({ email: normalizedEmail });
 
   if (userExists) {
     res.status(409);
@@ -23,16 +21,16 @@ const registerUser = asyncHandler(async (req, res) => {
   const salt = await bcrypt.genSalt(12);
   const hashedPassword = await bcrypt.hash(password, salt);
 
-  // Generate verification token
-  const verificationToken = crypto.randomBytes(32).toString('hex');
+  const verificationToken = generateVerificationToken({
+    email: email.toLowerCase().trim()
+  });
 
   // Create user
   const user = await User.create({
     profile: { name },
-    email,
+    email: normalizedEmail,
     passwordHash: hashedPassword,
-    isEmailVerified: false, 
-    verificationToken,
+    isEmailVerified: true, // DEV_MODE: Auto-verify for easy testing
     role: 'student'
   });
 
@@ -44,7 +42,7 @@ const registerUser = asyncHandler(async (req, res) => {
       template: 'verify-email',
       data: {
         name: user.profile.name,
-        actionUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`
+        actionUrl: `${process.env.BACKEND_URL || 'http://localhost:5005'}/api/auth/verify?token=${verificationToken}`
       }
     }).catch(err => console.error('Email send failed during signup:', err));
     res.status(201).json({
@@ -52,6 +50,8 @@ const registerUser = asyncHandler(async (req, res) => {
       name: user.profile.name,
       email: user.email,
       role: user.role,
+      status: user.status,
+      isEmailVerified: user.isEmailVerified,
       onboardingComplete: user.onboardingComplete,
       token: generateToken(user._id),
     });
@@ -63,17 +63,22 @@ const registerUser = asyncHandler(async (req, res) => {
 
 // @desc    Authenticate a user
 // @route   POST /api/auth/login
-// @access  Public
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
+  const normalizedEmail = email.toLowerCase().trim();
 
   // Check for user email
-  const user = await User.findOne({ email }).select('+passwordHash');
+  const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash');
 
   if (user && (await bcrypt.compare(password, user.passwordHash))) {
     if (!user.isEmailVerified) {
       res.status(403);
       throw new Error('Please verify your email first');
+    }
+
+    if (user.status === 'suspended') {
+      res.status(403);
+      throw new Error('Your account has been suspended. Please contact support.');
     }
 
     user.lastLoginAt = Date.now();
@@ -84,6 +89,11 @@ const loginUser = asyncHandler(async (req, res) => {
       name: user.profile.name,
       email: user.email,
       role: user.role,
+      status: user.status,
+      isEmailVerified: user.isEmailVerified,
+      profile: user.profile,
+      interests: user.interests,
+      notificationPrefs: user.notificationPrefs,
       onboardingComplete: user.onboardingComplete,
       token: generateToken(user._id),
     });
@@ -100,11 +110,40 @@ const generateToken = (id) => {
   });
 };
 
+const generateVerificationToken = (payload) => jwt.sign(
+  { ...payload, type: 'email_verification' },
+  process.env.JWT_SECRET,
+  { expiresIn: '24h' }
+);
+
 // @desc    Verify email address
-// @route   GET /api/auth/verify/:token
+// @route   GET /api/auth/verify?token=...
 // @access  Public
 const verifyEmail = asyncHandler(async (req, res) => {
-  const user = await User.findOne({ verificationToken: req.params.token });
+  const token = req.query.token || req.params.token;
+
+  if (!token) {
+    res.status(400);
+    throw new Error('Verification token is required');
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (error) {
+    res.status(400);
+    throw new Error('Invalid or expired verification token');
+  }
+
+  if (decoded.type !== 'email_verification' || !decoded.email) {
+    res.status(400);
+    throw new Error('Invalid verification token');
+  }
+
+  const user = await User.findOne({
+    email: decoded.email,
+    verificationToken: token
+  });
 
   if (!user) {
     res.status(400);
@@ -115,11 +154,42 @@ const verifyEmail = asyncHandler(async (req, res) => {
   user.verificationToken = undefined;
   await user.save();
 
+  if (req.query.token) {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5174';
+    return res.redirect(`${frontendUrl}/onboarding`);
+  }
+
   res.json({ message: 'Email verified successfully!' });
+});
+
+// @desc    Get current user profile
+// @route   GET /api/auth/me
+// @access  Private
+const getMe = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (user) {
+    res.json({
+      _id: user.id,
+      name: user.profile.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      isEmailVerified: user.isEmailVerified,
+      profile: user.profile,
+      interests: user.interests,
+      notificationPrefs: user.notificationPrefs,
+      onboardingComplete: user.onboardingComplete,
+    });
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
 });
 
 module.exports = {
   registerUser,
   loginUser,
-  verifyEmail
+  verifyEmail,
+  getMe
 };

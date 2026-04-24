@@ -47,8 +47,15 @@ export default function ListingDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['listing', id] });
       addToast({
         title: status === 'saved' ? 'Saved!' : 'Action complete',
-        message: `Opportunity marked as ${status}.`,
+        body: `Opportunity marked as ${status}.`,
         type: 'success'
+      });
+    },
+    onError: (error) => {
+      addToast({
+        title: 'Action failed',
+        body: error.response?.data?.message || 'We could not update your status for this listing.',
+        type: 'error'
       });
     }
   });

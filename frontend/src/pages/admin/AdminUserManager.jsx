@@ -21,8 +21,15 @@ export default function AdminUserManager() {
       queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
       addToast({
         title: 'Status Updated',
-        message: `User marked as ${variables.status}.`,
+        body: `User marked as ${variables.status}.`,
         type: 'success'
+      });
+    },
+    onError: (error) => {
+      addToast({
+        title: 'Update failed',
+        body: error.response?.data?.message || 'We could not update user status.',
+        type: 'error'
       });
     }
   });

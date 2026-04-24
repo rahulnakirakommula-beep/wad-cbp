@@ -74,4 +74,52 @@ describe('Auth Contract Tests (SRS Traceability)', () => {
     // Global rate limit should return headers
     expect(res.headers).toHaveProperty('ratelimit-limit');
   });
+
+  // --- NEW TESTS (Mirroring COA_Test_Plan 1.1 & 1.2) ---
+
+  test('1.1.2: Submit with empty name', async () => {
+    const res = await request(app)
+      .post('/api/auth/signup')
+      .send({ ...testUser, name: '' });
+    expect(res.statusCode).toBe(400); // Bad Request
+  });
+
+  test('1.1.3: Submit with invalid email format', async () => {
+    const res = await request(app)
+      .post('/api/auth/signup')
+      .send({ ...testUser, email: 'not-an-email' });
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('1.2.4: Login with wrong password', async () => {
+    // Relying on user created in previous test or setup
+    await request(app).post('/api/auth/signup').send({ ...testUser, email: 'wrongpass@test.com' });
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'wrongpass@test.com', password: 'WrongPassword123' });
+    expect(res.statusCode).toBe(401);
+  });
+
+  test('1.2.5: Login with unverified email', async () => {
+    // User signed up but not verified
+    await request(app).post('/api/auth/signup').send({ ...testUser, email: 'unverified@test.com' });
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'unverified@test.com', password: testUser.password });
+    expect(res.statusCode).toBe(403);
+  });
+
+  test('1.2.7: Login with suspended account', async () => {
+    await request(app).post('/api/auth/signup').send({ ...testUser, email: 'suspended@test.com' });
+    const userToSuspend = await User.findOne({ email: 'suspended@test.com' });
+    userToSuspend.isEmailVerified = true;
+    userToSuspend.status = 'suspended';
+    await userToSuspend.save();
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'suspended@test.com', password: testUser.password });
+    expect(res.statusCode).toBe(403);
+  });
+
 });

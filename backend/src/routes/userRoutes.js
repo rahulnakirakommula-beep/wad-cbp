@@ -4,6 +4,7 @@ const { completeOnboarding, getUserProfile, updatePreferences, changePassword } 
 const { protect } = require('../middleware/authMiddleware');
 
 router.get('/profile', protect, getUserProfile);
+router.put('/profile', protect, updatePreferences);
 router.put('/onboarding', protect, completeOnboarding);
 router.put('/preferences', protect, updatePreferences);
 router.put('/password', protect, changePassword);

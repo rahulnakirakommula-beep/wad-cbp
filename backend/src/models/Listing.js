@@ -84,10 +84,27 @@ listingSchema.virtual('dataSourceYear').get(function() {
   return null;
 });
 
-// Virtual for confidence level (FR-LST-07)
+// Virtual for confidence level (FR-LST-07) — SRS-specified date-based logic
 listingSchema.virtual('confidenceLevel').get(function() {
-  if (this.isCurated) return 'Confirmed';
-  if (this.timeline.lastDeadline) return 'Based on Historical Data';
+  const now = new Date();
+  // "Confirmed": Listing is curated OR has a deadline set in the current/future cycle
+  if (this.isCurated) {
+    return 'Confirmed';
+  }
+  if (this.timeline?.deadline && new Date(this.timeline.deadline) >= new Date(now.getFullYear(), 0, 1)) {
+    return 'Confirmed';
+  }
+  // "Based on [YEAR] Data": Has lastDeadline within 1 year
+  // "Approximate — [YEAR] Data": Older
+  if (this.timeline?.lastDeadline) {
+    const lastYear = new Date(this.timeline.lastDeadline).getFullYear();
+    const yearsAgo = now.getFullYear() - lastYear;
+    if (yearsAgo <= 1) {
+      return `Based on ${lastYear} Data`;
+    } else {
+      return `Approximate — ${lastYear} Data`;
+    }
+  }
   return 'Approximate';
 });
 

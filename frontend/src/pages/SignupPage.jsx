@@ -10,11 +10,25 @@ export default function SignupPage() {
   const { signup } = useAuth();
   const { addToast } = useToast();
   
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.name.trim()) newErrors.name = 'Full name is required.';
+    if (!formData.email.trim()) newErrors.email = 'Email is required.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Enter a valid email address.';
+    if (!formData.password) newErrors.password = 'Password is required.';
+    else if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters.';
+    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match.';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
     setIsSubmitting(true);
 
     try {
@@ -22,14 +36,14 @@ export default function SignupPage() {
       if (!result.success) {
         addToast({
           title: 'Signup Failed',
-          message: result.message || 'Could not create account. Email might already be taken.',
+          body: result.message || 'Could not create account. Email might already be taken.',
           type: 'error'
         });
       }
     } catch (err) {
       addToast({
         title: 'Network Error',
-        message: 'Could not connect to the server at this time.',
+        body: 'Could not connect to the server at this time.',
         type: 'error'
       });
     } finally {
@@ -45,15 +59,15 @@ export default function SignupPage() {
           <p className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-none">Start your opportunity journey</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           <Input
             label="Full Name"
             type="text"
             iconLeading={User}
             placeholder="John Doe"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
+            onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setErrors(prev => ({ ...prev, name: undefined })); }}
+            error={errors.name}
           />
 
           <Input
@@ -62,8 +76,8 @@ export default function SignupPage() {
             iconLeading={Mail}
             placeholder="you@college.edu"
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            required
+            onChange={(e) => { setFormData({ ...formData, email: e.target.value }); setErrors(prev => ({ ...prev, email: undefined })); }}
+            error={errors.email}
           />
 
           <Input
@@ -72,9 +86,19 @@ export default function SignupPage() {
             iconLeading={Lock}
             placeholder="••••••••"
             value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            required
-            helperText="Minimum 8 characters with numbers"
+            onChange={(e) => { setFormData({ ...formData, password: e.target.value }); setErrors(prev => ({ ...prev, password: undefined })); }}
+            error={errors.password}
+            helperText={!errors.password ? "Minimum 8 characters" : undefined}
+          />
+
+          <Input
+            label="Confirm Password"
+            type="password"
+            iconLeading={Lock}
+            placeholder="••••••••"
+            value={formData.confirmPassword}
+            onChange={(e) => { setFormData({ ...formData, confirmPassword: e.target.value }); setErrors(prev => ({ ...prev, confirmPassword: undefined })); }}
+            error={errors.confirmPassword}
           />
 
           <div className="pt-2">

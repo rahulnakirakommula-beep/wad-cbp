@@ -18,6 +18,19 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Response interceptor for session expiry
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('coa_token');
+      localStorage.removeItem('coa_user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -43,6 +56,11 @@ export function AuthProvider({ children }) {
         name: data.name,
         email: data.email,
         role: data.role,
+        status: data.status,
+        isEmailVerified: data.isEmailVerified,
+        profile: data.profile,
+        interests: data.interests,
+        notificationPrefs: data.notificationPrefs,
         onboardingComplete: data.onboardingComplete
       }));
       
@@ -50,6 +68,8 @@ export function AuthProvider({ children }) {
       
       if (data.role === 'admin') {
         navigate('/admin');
+      } else if (data.role === 'source') {
+        navigate('/org');
       } else if (!data.onboardingComplete) {
         navigate('/onboarding');
       } else {
@@ -74,6 +94,11 @@ export function AuthProvider({ children }) {
         name: data.name,
         email: data.email,
         role: data.role,
+        status: data.status,
+        isEmailVerified: data.isEmailVerified,
+        profile: data.profile,
+        interests: data.interests,
+        notificationPrefs: data.notificationPrefs,
         onboardingComplete: data.onboardingComplete
       }));
       
@@ -97,8 +122,12 @@ export function AuthProvider({ children }) {
 
   // Profile update helper
   const updateOnboarding = (updatedUser) => {
-    localStorage.setItem('coa_user', JSON.stringify(updatedUser));
-    setUser(updatedUser);
+    const mergedUser = {
+      ...user,
+      ...updatedUser
+    };
+    localStorage.setItem('coa_user', JSON.stringify(mergedUser));
+    setUser(mergedUser);
   };
 
   return (

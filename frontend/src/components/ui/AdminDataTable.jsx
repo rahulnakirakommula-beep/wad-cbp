@@ -112,16 +112,19 @@ export default function AdminDataTable({
                 ))}
                 <td className="pr-8 py-4 text-right">
                   <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {actions?.map((action, i) => (
-                      <button 
-                        key={i}
-                        onClick={(e) => { e.stopPropagation(); action.onClick(row); }}
-                        className={`p-2 rounded-lg transition-all ${action.variant === 'danger' ? 'text-red-400 hover:bg-red-50 hover:text-red-600' : 'text-slate-400 hover:bg-white hover:shadow-sm'}`}
-                        title={action.label}
-                      >
-                        <action.icon size={16} />
-                      </button>
-                    ))}
+                    {actions?.map((action, i) => {
+                      const Icon = typeof action.icon === 'function' ? action.icon(row) : action.icon;
+                      return (
+                        <button 
+                          key={i}
+                          onClick={(e) => { e.stopPropagation(); action.onClick(row); }}
+                          className={`p-2 rounded-lg transition-all ${action.variant === 'danger' ? 'text-red-400 hover:bg-red-50 hover:text-red-600' : 'text-slate-400 hover:bg-white hover:shadow-sm'}`}
+                          title={typeof action.label === 'function' ? action.label(row) : action.label}
+                        >
+                          <Icon size={16} />
+                        </button>
+                      );
+                    })}
                   </div>
                 </td>
               </tr>

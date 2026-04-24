@@ -14,7 +14,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const AdminSidebar = () => {
+import { Menu, X } from 'lucide-react';
+
+const AdminSidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { logout } = useAuth();
 
@@ -24,8 +26,8 @@ const AdminSidebar = () => {
       items: [
         { label: 'Overview', icon: LayoutDashboard, path: '/admin' },
         { label: 'Listings', icon: List, path: '/admin/listings' },
-        { label: 'Submission Queue', icon: FileCheck, path: '/admin/queue' },
-        { label: 'Staleness Queue', icon: Clock, path: '/admin/stale' },
+        { label: 'Submission Queue', icon: FileCheck, path: '/admin/listings?status=unknown' },
+        { label: 'Staleness Queue', icon: Clock, path: '/admin/listings?isStale=true' },
       ]
     },
     {
@@ -61,11 +63,20 @@ const AdminSidebar = () => {
   };
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-60 bg-white border-r-2 border-slate-100 flex flex-col z-50">
-      <div className="p-6">
+    <div className={`
+      fixed left-0 top-0 h-screen w-60 bg-white border-r-2 border-slate-100 flex flex-col z-[60] transition-transform duration-300 ease-out
+      ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+    `}>
+      <div className="p-6 flex items-center justify-between">
         <Link to="/admin" className="text-2xl font-black text-primary-navy tracking-tighter">
           COA<span className="text-accent-amber">.</span>ADMIN
         </Link>
+        <button 
+          onClick={onClose}
+          className="lg:hidden p-2 bg-slate-50 rounded-xl text-slate-400"
+        >
+          <X size={20} />
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-4 space-y-8 scrollbar-hide">

@@ -2,10 +2,11 @@ const nodemailer = require('nodemailer');
 const ejs = require('ejs');
 const path = require('path');
 
-// Configure Transporter (Default to Mailtrap/Ghost setup if not provided)
+// Configure Transporter
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.mailtrap.io',
-  port: process.env.SMTP_PORT || 2525,
+  host: process.env.SMTP_HOST || 'smtp.resend.com',
+  port: parseInt(process.env.SMTP_PORT) || 587,
+  secure: process.env.SMTP_PORT == 465, // true for 465, false for other ports
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS
@@ -22,7 +23,7 @@ const sendEmail = async (options) => {
     const html = await ejs.renderFile(templatePath, options.data || {});
 
     const mailOptions = {
-      from: '"COA Notifications" <no-reply@coa.com>',
+      from: process.env.SMTP_FROM || '"COA Notifications" <no-reply@coa.com>',
       to: options.email,
       subject: options.subject,
       html

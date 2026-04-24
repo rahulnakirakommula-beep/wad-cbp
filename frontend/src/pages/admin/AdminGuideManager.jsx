@@ -36,7 +36,7 @@ export default function AdminGuideManager() {
       queryClient.invalidateQueries({ queryKey: ['adminGuides'] });
       addToast({
         title: vars.published ? 'Guide Published' : 'Guide Unpublished',
-        message: 'Student visibility has been updated.',
+        body: 'Student visibility has been updated.',
         type: 'success'
       });
     }

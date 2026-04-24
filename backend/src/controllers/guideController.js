@@ -8,7 +8,7 @@ const Listing = require('../models/Listing');
 const getGuideById = asyncHandler(async (req, res) => {
   const guide = await KnowledgeGuide.findById(req.params.id);
 
-  if (!guide) {
+  if (!guide || !guide.isPublished) {
     res.status(404);
     throw new Error('Guide not found');
   }

@@ -6,7 +6,7 @@ const bcrypt = require('bcryptjs');
 // @route   PUT /api/user/onboarding
 // @access  Private
 const completeOnboarding = asyncHandler(async (req, res) => {
-  const { branch, currentYear, interests } = req.body;
+  const { branch, currentYear, interests, notificationPrefs } = req.body;
 
   const user = await User.findById(req.user._id);
 
@@ -14,6 +14,12 @@ const completeOnboarding = asyncHandler(async (req, res) => {
     user.profile.branch = branch || user.profile.branch;
     user.profile.currentYear = currentYear || user.profile.currentYear;
     user.interests = interests || user.interests;
+    if (notificationPrefs) {
+      user.notificationPrefs = {
+        ...user.notificationPrefs?.toObject?.(),
+        ...notificationPrefs
+      };
+    }
     user.onboardingComplete = true;
 
     const updatedUser = await user.save();
@@ -23,9 +29,12 @@ const completeOnboarding = asyncHandler(async (req, res) => {
       name: updatedUser.profile.name,
       email: updatedUser.email,
       role: updatedUser.role,
+      status: updatedUser.status,
       onboardingComplete: updatedUser.onboardingComplete,
       profile: updatedUser.profile,
-      interests: updatedUser.interests
+      interests: updatedUser.interests,
+      notificationPrefs: updatedUser.notificationPrefs,
+      isEmailVerified: updatedUser.isEmailVerified
     });
   } else {
     res.status(404);
@@ -45,9 +54,12 @@ const getUserProfile = asyncHandler(async (req, res) => {
       name: user.profile.name,
       email: user.email,
       role: user.role,
+      status: user.status,
       profile: user.profile,
       interests: user.interests,
-      onboardingComplete: user.onboardingComplete
+      onboardingComplete: user.onboardingComplete,
+      notificationPrefs: user.notificationPrefs,
+      isEmailVerified: user.isEmailVerified
     });
   } else {
     res.status(404);
@@ -59,20 +71,34 @@ const getUserProfile = asyncHandler(async (req, res) => {
 // @route   PUT /api/user/preferences
 // @access  Private
 const updatePreferences = asyncHandler(async (req, res) => {
-  const { branch, currentYear, interests } = req.body;
+  const { name, branch, currentYear, interests, notificationPrefs } = req.body;
   const user = await User.findById(req.user._id);
 
   if (user) {
+    if (name) user.profile.name = name;
     if (branch) user.profile.branch = branch;
     if (currentYear) user.profile.currentYear = currentYear;
     if (interests) user.interests = interests;
+    if (notificationPrefs) {
+      user.notificationPrefs = {
+        ...user.notificationPrefs?.toObject?.(),
+        ...notificationPrefs
+      };
+    }
 
     const updatedUser = await user.save();
 
     res.json({
       _id: updatedUser._id,
+      name: updatedUser.profile.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      status: updatedUser.status,
       profile: updatedUser.profile,
-      interests: updatedUser.interests
+      interests: updatedUser.interests,
+      notificationPrefs: updatedUser.notificationPrefs,
+      onboardingComplete: updatedUser.onboardingComplete,
+      isEmailVerified: updatedUser.isEmailVerified
     });
   } else {
     res.status(404);

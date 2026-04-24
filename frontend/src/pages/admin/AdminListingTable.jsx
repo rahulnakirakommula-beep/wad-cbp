@@ -12,15 +12,17 @@ import {
   ShieldCheck,
   Zap,
   MoreVertical,
-  Check
+  Check,
+  X
 } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 
 // UI Components
 import AdminDataTable from '../../components/ui/AdminDataTable';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import AdminBreadcrumbs from '../../components/ui/AdminBreadcrumbs';
 import { useToast } from '../../context/ToastContext';
 
 export default function AdminListingTable() {
@@ -28,12 +30,14 @@ export default function AdminListingTable() {
   const navigate = useNavigate();
   const { addToast } = useToast();
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedRows, setSelectedRows] = useState([]);
+  
+  const selectedStatus = searchParams.get('status') || 'all';
 
   // Fetch Admin Listings with filters
-  const { data: listings = [], isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['adminListings', selectedStatus, search],
     queryFn: async () => {
       const { data } = await api.get(`/admin/listings?status=${selectedStatus === 'all' ? '' : selectedStatus}&q=${search}`);
@@ -41,13 +45,19 @@ export default function AdminListingTable() {
     }
   });
 
+  const listings = data?.listings || [];
+
+  const setStatus = (status) => {
+    setSearchParams({ status });
+  };
+
   const cycleResetMutation = useMutation({
     mutationFn: (id) => api.post(`/admin/listings/${id}/cycle-reset`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminListings'] });
       addToast({
         title: 'Cycle Reset',
-        message: 'Listing set back to Upcoming status.',
+        body: 'Listing set back to Upcoming status.',
         type: 'info'
       });
     }
@@ -59,7 +69,7 @@ export default function AdminListingTable() {
       queryClient.invalidateQueries({ queryKey: ['adminListings'] });
       addToast({
         title: 'Verified',
-        message: 'Listing staleness reset and lastVerifiedAt updated.',
+        body: 'Listing staleness reset and lastVerifiedAt updated.',
         type: 'success'
       });
     }
@@ -117,11 +127,9 @@ export default function AdminListingTable() {
 
   return (
     <div className="space-y-10 pb-20">
-      <header className="px-1 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
-        <div className="space-y-1">
-          <Link to="/admin" className="text-xs font-black text-slate-400 hover:text-primary-navy transition-colors flex items-center gap-1 uppercase tracking-widest mb-2">
-            <ChevronLeft size={14} /> Back to Hub
-          </Link>
+      <header className="px-1 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 pb-10">
+        <div className="space-y-1 w-full">
+          <AdminBreadcrumbs />
           <h1 className="text-3xl sm:text-4xl font-black text-primary-navy tracking-tight">Listing Manager</h1>
           <p className="text-slate-500 font-medium italic">Full-cycle curation and operational auditing.</p>
         </div>
@@ -153,7 +161,7 @@ export default function AdminListingTable() {
           {statuses.map(s => (
             <button
               key={s}
-              onClick={() => setSelectedStatus(s)}
+              onClick={() => setStatus(s)}
               className={`
                 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all
                 ${selectedStatus === s ? 'bg-primary-navy text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:text-primary-navy'}

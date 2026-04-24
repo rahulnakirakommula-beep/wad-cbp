@@ -169,7 +169,7 @@ export default function AdminDashboard() {
                   label="Submission Queue" 
                   description="Review organic submissions" 
                   icon={TrendingUp} 
-                  onClick={() => navigate('/admin/queue')} 
+                  onClick={() => navigate('/admin/listings?status=unknown')} 
                 />
                 <ToolLink 
                   label="Source Hub" 

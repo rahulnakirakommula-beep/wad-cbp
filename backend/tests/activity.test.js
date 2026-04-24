@@ -36,7 +36,7 @@ describe('Activity Management Tests (FR-ACT)', () => {
 
   test('FR-ACT-04: User can delete an activity (if not missed)', async () => {
     await UserActivity.create({
-      userId: user._id, listingId: listing._id, status: 'interested'
+      userId: user._id, listingId: listing._id, status: 'saved'
     });
 
     const res = await request(app)
@@ -57,7 +57,7 @@ describe('Activity Management Tests (FR-ACT)', () => {
       .delete(`/api/activity/${listing._id}`)
       .set('Authorization', `Bearer ${token}`);
 
-    expect(res.statusCode).toBe(400);
-    expect(res.body.message).toMatch(/cannot delete missed activity/i);
+    expect(res.statusCode).toBe(403);
+    expect(res.body.message).toMatch(/missed listings cannot be removed/i);
   });
 });

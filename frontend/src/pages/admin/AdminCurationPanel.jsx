@@ -36,7 +36,7 @@ export default function AdminCurationPanel() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { addToast } = useToast();
-  const isNew = id === 'new';
+  const isNew = !id || id === 'new';
 
   const [formData, setFormData] = useState({});
   const [isDirty, setIsDirty] = useState(false);
@@ -45,16 +45,19 @@ export default function AdminCurationPanel() {
   const { data: listing, isLoading } = useQuery({
     queryKey: ['adminListing', id],
     queryFn: async () => {
-      if (isNew) return { title: '', status: 'upcoming', type: 'internship', timeline: {} };
+      if (isNew) return { title: '', status: 'upcoming', type: 'internship', timeline: {}, targetAudience: { branches: [], years: [] }, domainTags: [] };
       const { data } = await api.get(`/admin/listings/${id}`);
       return data;
     },
-    onSuccess: (data) => setFormData(data)
+    onSuccess: (data) => setFormData(data || {})
   });
 
   // Fetch Tags and Branches for dropdowns
-  const { data: branches = [] } = useQuery({ queryKey: ['branches'], queryFn: async () => (await api.get('/meta/branches')).data });
-  const { data: tags = [] } = useQuery({ queryKey: ['tags'], queryFn: async () => (await api.get('/meta/tags')).data });
+  const { data: branchesData = [] } = useQuery({ queryKey: ['branches'], queryFn: async () => (await api.get('/meta/branches')).data });
+  const { data: tagsData = [] } = useQuery({ queryKey: ['tags'], queryFn: async () => (await api.get('/meta/tags')).data });
+
+  const branches = Array.isArray(branchesData) ? branchesData : [];
+  const tags = Array.isArray(tagsData) ? tagsData : [];
 
   const mutation = useMutation({
     mutationFn: (data) => {
@@ -63,7 +66,7 @@ export default function AdminCurationPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminListings'] });
-      addToast({ title: 'Saved!', message: 'Listing has been updated.', type: 'success' });
+      addToast({ title: 'Saved!', body: 'Listing has been updated.', type: 'success' });
       setIsDirty(false);
       if (isNew) navigate('/admin/listings');
     }
@@ -149,21 +152,22 @@ export default function AdminCurationPanel() {
             <div className="space-y-8">
               <TagPicker 
                 label="Target Branches" 
-                options={branches} 
-                selected={formData.targetBranches || []} 
-                onChange={(v) => updateField('targetBranches', v)} 
+                tags={branches.map(b => ({ id: b, name: b }))} 
+                selectedTags={formData.targetAudience?.branches || []} 
+                onChange={(v) => updateField('targetAudience.branches', v)} 
               />
               <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Allowed Years</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Allowed Years</label>
                 <div className="flex gap-4">
                   {[1,2,3,4].map(y => (
                     <button 
                       key={y}
+                      type="button"
                       onClick={() => {
-                        const years = formData.targetYears || [];
-                        updateField('targetYears', years.includes(y) ? years.filter(v => v !== y) : [...years, y]);
+                        const years = formData.targetAudience?.years || [];
+                        updateField('targetAudience.years', years.includes(y) ? years.filter(v => v !== y) : [...years, y]);
                       }}
-                      className={`w-12 h-12 rounded-xl border-2 font-black transition-all ${formData.targetYears?.includes(y) ? 'bg-primary-navy text-white border-primary-navy' : 'bg-slate-50 text-slate-300 border-slate-100'}`}
+                      className={`w-12 h-12 rounded-xl border-2 font-black transition-all ${formData.targetAudience?.years?.includes(y) ? 'bg-primary-navy text-white border-primary-navy' : 'bg-slate-50 text-slate-300 border-slate-100'}`}
                     >
                       {y}
                     </button>
@@ -176,8 +180,8 @@ export default function AdminCurationPanel() {
           <Accordion title="Classification Tags" icon={Tags}>
              <TagPicker 
                 label="Domain Tags" 
-                options={tags} 
-                selected={formData.domainTags || []} 
+                tags={tags.map(t => ({ id: t.displayName, name: t.displayName }))} 
+                selectedTags={formData.domainTags || []} 
                 onChange={(v) => updateField('domainTags', v)} 
               />
           </Accordion>

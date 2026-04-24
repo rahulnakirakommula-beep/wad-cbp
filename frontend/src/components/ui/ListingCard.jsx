@@ -39,7 +39,7 @@ export default function ListingCard({
     
     addToast({
       title: newState ? 'Saved' : 'Removed',
-      message: `${title} has been ${newState ? 'added to' : 'removed from'} your saved opportunities.`,
+      body: `${title} has been ${newState ? 'added to' : 'removed from'} your saved opportunities.`,
       type: 'success'
     });
   };
@@ -53,7 +53,7 @@ export default function ListingCard({
 
     addToast({
       title: 'Opportunity Ignored',
-      message: 'This listing will no longer appear in your feed.',
+      body: 'This listing will no longer appear in your feed.',
       type: 'info'
     });
   };

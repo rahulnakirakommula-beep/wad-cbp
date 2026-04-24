@@ -24,14 +24,14 @@ export default function LoginPage() {
       if (!result.success) {
         addToast({
           title: 'Login Failed',
-          message: result.message || 'Invalid credentials. Please try again.',
+          body: result.message || 'Invalid credentials. Please try again.',
           type: 'error'
         });
       }
     } catch (err) {
       addToast({
         title: 'Network Error',
-        message: 'Could not connect to the server at this time.',
+        body: 'Could not connect to the server at this time.',
         type: 'error'
       });
     } finally {

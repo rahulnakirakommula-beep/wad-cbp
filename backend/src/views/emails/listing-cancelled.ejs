@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #1b2a4a; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 2px solid #f1f5f9; border-radius: 20px; }
+    .header { background: #dc2626; color: white; padding: 30px; border-radius: 16px; text-align: center; }
+    .footer { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 30px; }
+    .button { display: inline-block; padding: 12px 24px; background: #1b2a4a; color: white; font-weight: bold; text-decoration: none; border-radius: 12px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Opportunity Cancelled</h1>
+    </div>
+    <div style="padding: 20px;">
+      <p>Hi <strong><%= name %></strong>,</p>
+      <p>We're writing to let you know that an opportunity you were tracking has been <strong>cancelled</strong>:</p>
+      
+      <div style="background: #fef2f2; padding: 20px; border-radius: 12px; border: 2px solid #fecaca; margin: 20px 0;">
+        <h3 style="margin: 0;"><%= listingTitle %></h3>
+        <p style="margin: 5px 0; color: #64748b;"><%= orgName %></p>
+        <p style="margin: 10px 0; font-weight: bold; color: #dc2626;">Status: Cancelled</p>
+      </div>
+
+      <p>We've removed this from your active list. Don't worry — there are plenty of other opportunities waiting for you!</p>
+      
+      <a href="<%= typeof actionUrl !== 'undefined' ? actionUrl : '#' %>" class="button">Browse Opportunities</a>
+    </div>
+    <div class="footer">
+      <p>Campus Opportunity Aggregator &copy; 2026</p>
+      <p>If you wish to stop receiving these alerts, manage your preferences in your profile settings.</p>
+    </div>
+  </div>
+</body>
+</html>

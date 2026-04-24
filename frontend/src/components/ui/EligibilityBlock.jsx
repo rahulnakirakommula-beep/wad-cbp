@@ -2,7 +2,8 @@ import { CheckCircle2, AlertCircle, XCircle, Users } from 'lucide-react';
 import Badge from './Badge';
 
 export default function EligibilityBlock({ listing, userProfile }) {
-  const { targetBranches = [], targetYears = [] } = listing;
+  const targetBranches = listing.targetAudience?.branches || [];
+  const targetYears = listing.targetAudience?.years || [];
   const userBranch = userProfile?.branch;
   const userYear = userProfile?.currentYear;
 

@@ -19,7 +19,7 @@ if (process.env.NODE_ENV !== 'test') {
 const cacheRecommendations = async (userId, data) => {
   if (!redis) return;
   try {
-    const key = `recommendations:user:${userId}`;
+    const key = `bluepenguin:feed:user:${userId}`;
     await redis.set(key, JSON.stringify(data), 'EX', 3600); // 1 hour expiry
   } catch (err) {
     console.error('Redis Cache Error:', err);
@@ -32,7 +32,7 @@ const cacheRecommendations = async (userId, data) => {
 const getCachedRecommendations = async (userId) => {
   if (!redis) return null;
   try {
-    const key = `recommendations:user:${userId}`;
+    const key = `bluepenguin:feed:user:${userId}`;
     const cached = await redis.get(key);
     return cached ? JSON.parse(cached) : null;
   } catch (err) {
@@ -47,7 +47,7 @@ const getCachedRecommendations = async (userId) => {
 const invalidateFeedCache = async (userId) => {
   if (!redis) return;
   try {
-    await redis.del(`recommendations:user:${userId}`);
+    await redis.del(`bluepenguin:feed:user:${userId}`);
   } catch (err) {
     console.error('Redis Invalidation Error:', err);
   }

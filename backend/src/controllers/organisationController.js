@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const Listing = require('../models/Listing');
+const Source = require('../models/Source');
 const AuditLog = require('../models/AuditLog');
 
 // Helper to record audit logs
@@ -38,16 +39,21 @@ const createMyListing = asyncHandler(async (req, res) => {
     throw new Error('User not linked to any organization');
   }
 
+  // FR-ORG-05: Official sources can direct-publish
+  const source = await Source.findById(req.user.sourceId);
+  const initialStatus = source?.verificationLevel === 'official' ? 'open' : 'unknown';
+
   const listing = await Listing.create({
     ...req.body,
     sourceId: req.user.sourceId,
-    status: 'unknown', // Submitted to queue for admin approval
+    status: initialStatus,
     isCurated: false,
     version: 1,
     verifiedBy: null
   });
 
-  await createAudit(req.user._id, 'user', 'listing', 'org_submission', listing._id);
+  const action = initialStatus === 'open' ? 'org_direct_publish' : 'org_submission';
+  await createAudit(req.user._id, 'user', 'listing', action, listing._id);
 
   res.status(201).json(listing);
 });

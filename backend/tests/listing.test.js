@@ -31,9 +31,16 @@ describe('Listing Metadata & Access Tests (FR-LST & FR-ACT)', () => {
       orgName: 'C', title: 'Curated', description: 'D', type: 'job', externalUrl: 'http://h.com', isCurated: true, sourceId: source._id
     });
     
+    // Within 1 year (assuming 2026)
     const historical = await Listing.create({
       orgName: 'H', title: 'Hist', description: 'D', type: 'job', externalUrl: 'http://h.com', isCurated: false, sourceId: source._id,
-      timeline: { lastDeadline: new Date('2023-01-01') }
+      timeline: { lastDeadline: new Date('2025-01-01') }
+    });
+
+    // Older than 1 year
+    const older = await Listing.create({
+      orgName: 'O', title: 'Older', description: 'D', type: 'job', externalUrl: 'http://h.com', isCurated: false, sourceId: source._id,
+      timeline: { lastDeadline: new Date('2024-01-01') }
     });
 
     const approximate = await Listing.create({
@@ -41,8 +48,9 @@ describe('Listing Metadata & Access Tests (FR-LST & FR-ACT)', () => {
     });
 
     expect(curated.confidenceLevel).toBe('Confirmed');
-    expect(historical.confidenceLevel).toBe('Based on Historical Data');
-    expect(historical.dataSourceYear).toBe(2023);
+    expect(historical.confidenceLevel).toBe('Based on 2025 Data');
+    expect(historical.dataSourceYear).toBe(2025);
+    expect(older.confidenceLevel).toBe('Approximate — 2024 Data');
     expect(approximate.confidenceLevel).toBe('Approximate');
   });
 
