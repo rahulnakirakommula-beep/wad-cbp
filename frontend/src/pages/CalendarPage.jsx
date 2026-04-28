@@ -22,6 +22,93 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+const DUMMY_LISTINGS = [
+  {
+    id: 'd1',
+    orgName: 'Google',
+    title: 'Software Engineering Intern',
+    timeline: { openDate: new Date(new Date().getFullYear(), 0, 15).toISOString(), deadline: null },
+  },
+  {
+    id: 'd2',
+    orgName: 'Microsoft',
+    title: 'SDE Full Time',
+    timeline: { openDate: null, deadline: new Date(new Date().getFullYear(), 1, 20).toISOString() },
+  },
+  {
+    id: 'd3',
+    orgName: 'Amazon',
+    title: 'SDE Intern',
+    timeline: { openDate: new Date(new Date().getFullYear(), 2, 5).toISOString(), deadline: new Date(new Date().getFullYear(), 3, 10).toISOString() },
+  },
+  {
+    id: 'd4',
+    orgName: 'Meta',
+    title: 'Production Engineer',
+    timeline: { openDate: new Date(new Date().getFullYear(), 4, 12).toISOString(), deadline: null },
+  },
+  {
+    id: 'd5',
+    orgName: 'Netflix',
+    title: 'UI Engineer',
+    timeline: { openDate: null, deadline: new Date(new Date().getFullYear(), 5, 25).toISOString() },
+  },
+  {
+    id: 'd6',
+    orgName: 'Apple',
+    title: 'Hardware Engineer Intern',
+    timeline: { openDate: new Date(new Date().getFullYear(), 6, 1).toISOString(), deadline: null },
+  },
+  {
+    id: 'd7',
+    orgName: 'Tesla',
+    title: 'Autopilot Engineer',
+    timeline: { openDate: null, deadline: new Date(new Date().getFullYear(), 7, 30).toISOString() },
+  },
+  {
+    id: 'd8',
+    orgName: 'SpaceX',
+    title: 'Software Engineer, Flight',
+    timeline: { openDate: new Date(new Date().getFullYear(), 8, 15).toISOString(), deadline: null },
+  },
+  {
+    id: 'd9',
+    orgName: 'Stripe',
+    title: 'Backend Engineer',
+    timeline: { openDate: null, deadline: new Date(new Date().getFullYear(), 9, 20).toISOString() },
+  },
+  {
+    id: 'd10',
+    orgName: 'Airbnb',
+    title: 'Frontend Engineer',
+    timeline: { openDate: new Date(new Date().getFullYear(), 10, 5).toISOString(), deadline: null },
+  },
+  {
+    id: 'd11',
+    orgName: 'Uber',
+    title: 'Data Scientist',
+    timeline: { openDate: null, deadline: new Date(new Date().getFullYear(), 11, 10).toISOString() },
+  },
+  {
+    id: 'd12',
+    orgName: 'Lyft',
+    title: 'Product Manager',
+    timeline: { openDate: new Date(new Date().getFullYear(), 0, 25).toISOString(), deadline: null },
+  },
+  {
+    id: 'd13',
+    orgName: 'Atlassian',
+    title: 'Security Engineer',
+    timeline: { openDate: new Date(new Date().getFullYear(), 2, 18).toISOString(), deadline: null },
+  },
+  {
+    id: 'd14',
+    orgName: 'Salesforce',
+    title: 'Cloud Engineer',
+    timeline: { openDate: null, deadline: new Date(new Date().getFullYear(), 6, 15).toISOString() },
+  }
+];
+
 export default function CalendarPage() {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
@@ -32,8 +119,15 @@ export default function CalendarPage() {
   const { data: listings = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['calendar-year', year, filterMode],
     queryFn: async () => {
+      // Return dummy data instead of fetching from API
+      return DUMMY_LISTINGS.filter(l => {
+        const d = new Date(l.timeline?.deadline || l.timeline?.openDate);
+        return d.getFullYear() === year;
+      });
+      /*
       const { data } = await api.get(`/listings/calendar/year?year=${year}&mode=${filterMode}`);
       return data;
+      */
     }
   });
 
