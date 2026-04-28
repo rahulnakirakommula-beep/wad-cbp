@@ -16,6 +16,11 @@ const userActivitySchema = new mongoose.Schema({
     enum: ['saved', 'applied', 'ignored', 'missed'],
     required: true
   },
+  applicationStatus: {
+    type: String,
+    enum: ['pending', 'accepted', 'rejected'],
+    default: null
+  },
   notes: {
     type: String,
     default: null

@@ -71,8 +71,8 @@ export default function SettingsPage() {
 
     setProfileForm({
       name: profileData.profile.name || '',
-      branch: profileData.profile.profile?.branch || 'CSE',
-      currentYear: profileData.profile.profile?.currentYear || 1
+      branch: profileData.profile?.branch || 'CSE',
+      currentYear: profileData.profile?.currentYear || 1
     });
     setInterestState(profileData.profile.interests || []);
     setNotificationPrefs({
@@ -86,8 +86,8 @@ export default function SettingsPage() {
     if (!profileData) return false;
     return (
       profileForm.name !== (profileData.profile.name || '') ||
-      profileForm.branch !== (profileData.profile.profile?.branch || 'CSE') ||
-      profileForm.currentYear !== (profileData.profile.profile?.currentYear || 1)
+      profileForm.branch !== (profileData.profile?.branch || 'CSE') ||
+      profileForm.currentYear !== (profileData.profile?.currentYear || 1)
     );
   }, [profileData, profileForm]);
 

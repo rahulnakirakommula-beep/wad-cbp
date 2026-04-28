@@ -45,17 +45,7 @@ export default function CalendarPage() {
     });
   });
 
-  // Auto-scroll to current month
-  useEffect(() => {
-    if (scrollRef.current && !isLoading) {
-      const currentMonth = new Date().getMonth();
-      const columnWidth = 320; // estimate
-      scrollRef.current.scrollTo({
-        left: currentMonth * columnWidth,
-        behavior: 'smooth'
-      });
-    }
-  }, [isLoading]);
+  // Removed auto-scroll logic as grid layout shows multiple items vertically
 
   return (
     <div className="space-y-10 pb-20 overflow-hidden">
@@ -84,8 +74,7 @@ export default function CalendarPage() {
 
       {/* Main Roadmap Grid */}
       <div 
-        ref={scrollRef}
-        className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory no-scrollbar cursor-grab active:cursor-grabbing"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-8"
       >
         {MONTHS.map((monthName, idx) => (
           <MonthColumn 
@@ -116,8 +105,8 @@ function MonthColumn({ name, year, isCurrent, listings, isLoading, onNavigate })
 
   return (
     <div className={`
-      flex-shrink-0 w-[300px] sm:w-[320px] snap-start transition-all duration-500
-      ${isCurrent ? 'bg-blue-50/20 ring-2 ring-primary-navy/5 rounded-[2.5rem]' : ''}
+      w-full transition-all duration-500 rounded-3xl border border-slate-100 bg-white shadow-sm
+      ${isCurrent ? 'bg-blue-50/20 ring-2 ring-primary-navy/5' : ''}
     `}>
       <div className="p-6 space-y-6">
         <header className="flex items-center justify-between">

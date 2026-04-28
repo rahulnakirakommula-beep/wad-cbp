@@ -40,7 +40,7 @@ const upsertActivity = asyncHandler(async (req, res) => {
 // @route   PUT /api/activity/:listingId
 // @access  Private
 const updateActivity = asyncHandler(async (req, res) => {
-  const { status, notes } = req.body;
+  const { status, notes, applicationStatus } = req.body;
   const { listingId } = req.params;
 
   if (status === 'missed') {
@@ -55,7 +55,16 @@ const updateActivity = asyncHandler(async (req, res) => {
     activity.status = status || activity.status;
     if (notes !== undefined) activity.notes = notes;
     activity.statusUpdatedAt = Date.now();
-    
+
+    // Update applicationStatus only for applied activities
+    if (applicationStatus !== undefined) {
+      if (activity.status !== 'applied' && status !== 'applied') {
+        res.status(400);
+        throw new Error('Application status can only be set on applied activities');
+      }
+      activity.applicationStatus = applicationStatus || null;
+    }
+
     const updatedActivity = await activity.save();
 
     if (oldStatus !== activity.status) {
@@ -85,13 +94,19 @@ const getActivitySummary = asyncHandler(async (req, res) => {
   const summary = {
     saved: 0,
     applied: 0,
-    missed: 0
+    missed: 0,
+    pending: 0,
+    accepted: 0,
+    rejected: 0
   };
 
   activities.forEach(a => {
     if (a.status === 'saved') summary.saved++;
     if (a.status === 'applied') summary.applied++;
     if (a.status === 'missed') summary.missed++;
+    if (a.applicationStatus === 'pending') summary.pending++;
+    if (a.applicationStatus === 'accepted') summary.accepted++;
+    if (a.applicationStatus === 'rejected') summary.rejected++;
   });
 
   res.json(summary);

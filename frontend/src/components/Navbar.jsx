@@ -1,8 +1,8 @@
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, api } from '../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../context/AuthContext';
-import { Bell, Calendar, LayoutDashboard, LogOut, Settings, Shield } from 'lucide-react';
+import { Bell, Calendar, LayoutDashboard, LogOut, Settings, Shield, Moon, Sun, ChevronDown } from 'lucide-react';
 
 function Navbar() {
   const { user, logout } = useAuth();
@@ -19,6 +19,19 @@ function Navbar() {
     refetchInterval: 60000
   });
 
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
+
   return (
     <nav className="sticky top-0 z-50 bg-white border-b-2 border-slate-100 px-6 py-3">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -31,8 +44,6 @@ function Navbar() {
             <NavLink to="/app/feed" icon={<LayoutDashboard size={20} />} label="Feed" active={location.pathname === '/app/feed'} />
             <NavLink to="/app/calendar" icon={<Calendar size={20} />} label="Calendar" active={location.pathname === '/app/calendar'} />
             <NavLink to="/app/dashboard" icon={<LayoutDashboard size={20} />} label="Dashboard" active={location.pathname === '/app/dashboard'} />
-            <NavLink to="/app/notifications" icon={<Bell size={20} />} label="Notifications" active={location.pathname === '/app/notifications'} />
-            <NavLink to="/app/settings" icon={<Settings size={20} />} label="Settings" active={location.pathname === '/app/settings'} />
             {user?.role === 'admin' && (
               <NavLink to="/admin" icon={<Shield size={20} className="text-red-500" />} label="Admin" active={location.pathname.startsWith('/admin')} />
             )}
@@ -41,8 +52,16 @@ function Navbar() {
 
         <div className="flex items-center gap-4">
           <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="p-2 text-slate-600 hover:text-primary-navy transition-colors rounded-xl hover:bg-slate-50"
+            title="Toggle Dark Mode"
+          >
+            {darkMode ? <Sun size={24} /> : <Moon size={24} />}
+          </button>
+
+          <button
             onClick={() => navigate('/app/notifications')}
-            className="relative p-2 text-slate-600 hover:text-primary-navy group"
+            className="relative p-2 text-slate-600 hover:text-primary-navy group rounded-xl hover:bg-slate-50"
           >
             <Bell size={24} className="group-hover:rotate-12 transition-transform" />
             {unreadData?.count > 0 && (
@@ -52,24 +71,36 @@ function Navbar() {
             )}
           </button>
 
-          <div className="h-8 w-[1px] bg-slate-200 mx-2" />
+          <div className="h-8 w-[1px] bg-slate-200 mx-1" />
 
-          <div className="flex items-center gap-3">
+          <div className="relative">
             <button
-              onClick={() => navigate('/app/settings')}
-              className="text-right hidden sm:block hover:bg-slate-50 p-2 rounded-xl transition-all"
+              onClick={() => setProfileOpen(!profileOpen)}
+              className="flex items-center gap-2 hover:bg-slate-50 p-2 rounded-xl transition-all"
             >
-              <p className="text-sm font-bold text-primary-navy leading-none">{user?.name}</p>
-              <p className="text-xs text-slate-500 mt-1 uppercase tracking-tighter font-black">{user?.profile?.branch} · Year {user?.profile?.currentYear}</p>
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-bold text-primary-navy leading-none">{user?.name}</p>
+                <p className="text-xs text-slate-500 mt-1 uppercase tracking-tighter font-black">{user?.profile?.branch} · Year {user?.profile?.currentYear}</p>
+              </div>
+              <ChevronDown size={16} className={`text-slate-400 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            <button
-              onClick={logout}
-              className="p-2 border-2 border-slate-100 rounded-xl hover:border-red-200 hover:text-red-500 transition-colors bg-white shadow-sm"
-              title="Logout"
-            >
-              <LogOut size={20} />
-            </button>
+            {profileOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white border-2 border-slate-100 rounded-xl shadow-lg py-2 z-50 animate-in slide-in-from-top-2 fade-in">
+                <button
+                  onClick={() => { setProfileOpen(false); navigate('/app/settings'); }}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-primary-navy transition-colors"
+                >
+                  <Settings size={18} /> Settings
+                </button>
+                <button
+                  onClick={() => { setProfileOpen(false); logout(); }}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut size={18} /> Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

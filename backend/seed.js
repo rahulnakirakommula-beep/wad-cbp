@@ -5,6 +5,7 @@ const Source = require('./src/models/Source');
 const User = require('./src/models/User');
 const UserActivity = require('./src/models/UserActivity');
 const DataFlag = require('./src/models/DataFlag');
+const Notification = require('./src/models/Notification');
 const bcrypt = require('bcryptjs');
 
 const SOURCES = [
@@ -40,6 +41,7 @@ const seedData = async () => {
     await User.deleteMany({});
     await UserActivity.deleteMany({});
     await DataFlag.deleteMany({});
+    await Notification.deleteMany({});
 
     // 1. Create Sources
     const createdSources = await Source.insertMany(SOURCES.map(s => ({
@@ -145,6 +147,21 @@ const seedData = async () => {
         issueType: i === 0 ? 'dead_link' : (i === 1 ? 'wrong_deadline' : 'other'),
         proposedFix: i === 0 ? 'New link is coa.com/apply' : 'Deadline is actually tomorrow.',
         status: 'pending'
+    })));
+
+    // 6. Create Notifications for Demo Student
+    const notifTypes = ['deadline_3day', 'dont_miss', 'season_open'];
+    const notifListings = rndMultiple(createdListings.filter(l => l.status === 'open'), 4);
+    await Notification.insertMany(notifListings.map((l, i) => ({
+        userId: student._id,
+        type: rnd(notifTypes),
+        listingId: l._id,
+        payload: {
+            title: `Update on ${l.title}`,
+            message: `There is an important update regarding the ${l.type} at ${l.orgName}. Check it out now!`,
+            actionUrl: `/app/listing/${l._id}`
+        },
+        status: i === 0 ? 'read' : 'unread'
     })));
 
     console.log('--- SEEDING COMPLETE ---');

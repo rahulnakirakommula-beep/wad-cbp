@@ -9,6 +9,16 @@ const badgeStyles = {
   cancelled: 'bg-red-50 text-red-700 border-red-100',
   unknown: 'bg-slate-50 text-slate-500 border-slate-100',
 
+  // Activity statuses
+  saved: 'bg-blue-50 text-blue-700 border-blue-100',
+  applied: 'bg-violet-50 text-violet-700 border-violet-100',
+  missed: 'bg-slate-100 text-slate-500 border-slate-200',
+
+  // Application outcome statuses
+  pending: 'bg-amber-50 text-amber-700 border-amber-200',
+  accepted: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  rejected: 'bg-red-50 text-red-600 border-red-100',
+
   // Priorities
   high: 'bg-amber-50 text-amber-700 border-amber-100',
   'dont-miss': 'bg-amber-100 text-amber-800 border-amber-200 ring-2 ring-amber-500 ring-offset-1 animate-pulse',
@@ -50,7 +60,11 @@ const badgeIcons = {
   unverified: XCircle,
   student: User,
   admin: Shield,
-  source: User
+  source: User,
+  // Application outcome
+  pending: AlertTriangle,
+  accepted: CheckCircle2,
+  rejected: XCircle
 };
 
 export default function Badge({ 
